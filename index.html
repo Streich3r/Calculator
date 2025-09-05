@@ -1,105 +1,167 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="de">
 <head>
-  <link rel="icon" type="image/png" href="icon-512.png">
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-  <title>Offline Calculator</title>
-  <meta name="description" content="A simple, offline-ready calculator that works offline and as a PWA." />
-  <link rel="manifest" href="manifest.json">
-  <style>
-    :root{--bg:#0b0d12;--panel:#121622;--btn:#1b2232;--btn-alt:#24304a;--text:#e9edf5;--muted:#95a3bf;--accent:#6aa1ff;--danger:#ff6b6b;--radius:18px;--shadow:0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05);}
-    @media (prefers-color-scheme: light){:root{--bg:#f5f7fb;--panel:#ffffff;--btn:#f1f4fb;--btn-alt:#e7ecf8;--text:#0b0d12;--muted:#5a6782;--accent:#2f6dff;--danger:#d14343;}}
-    *{box-sizing:border-box} html,body{height:100%} body{margin:0;font:18px system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial;background:radial-gradient(1200px 800px at 80% -20%, rgba(106,161,255,.15), transparent 60%),var(--bg);color:var(--text);display:grid;place-items:center;-webkit-tap-highlight-color: transparent;}
-    .app{width:min(460px,95vw);padding:18px;border-radius:var(--radius);background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01)),var(--panel);box-shadow:var(--shadow);}
-    .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px} h1{font-size:20px;margin:0;letter-spacing:.3px;font-weight:700} .credits{font-size:12px;color:var(--muted)}
-    .display{position:relative;border-radius:14px;background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.06));padding:20px;min-height:100px;box-shadow:inset 0 2px 12px rgba(0,0,0,.25)}
-    .expr{font-size:15px;color:var(--muted);min-height:20px;word-wrap:break-word} .value{font-size:38px;line-height:1.3;font-variant-numeric:tabular-nums;word-wrap:break-word}
-    .keys{margin-top:14px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px} button{appearance:none;border:none;border-radius:16px;background:var(--btn);color:var(--text);padding:22px;font-size:22px;cursor:pointer;box-shadow:var(--shadow);transition: transform .06s ease, filter .2s ease;touch-action: manipulation;} button:active{transform:scale(0.96)} button:focus-visible{outline:2px solid var(--accent);outline-offset:2px} button[data-variant="op"]{background:var(--btn-alt)} button[data-variant="accent"]{background:linear-gradient(180deg, rgba(106,161,255,.22), rgba(106,161,255,.1));} button[data-variant="danger"]{background:linear-gradient(180deg, rgba(255,107,107,.25), rgba(255,107,107,.12));} .span-2{grid-column:span 2} .sr-only{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
-    .footer{margin-top:14px;display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:12px;flex-wrap:wrap} .switcher{display:flex;gap:8px} .switch{background:transparent;box-shadow:none;border:1px solid rgba(255,255,255,.08);padding:8px 10px;font-size:12px}
-  </style>
+<link rel="icon" type="image/png" href="icon-512.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Offline Document Viewer</title>
+<style>
+body { font-family: sans-serif; padding: 20px; background-color: #0b0d12; color: #fff; }
+button { margin: 5px; padding: 10px 15px; font-size: 1rem; background-color: #1f222d; color: #fff; border: 1px solid #444; border-radius: 5px; cursor: pointer; }
+button:hover { background-color: #2a2e3c; }
+#viewer { margin-top: 20px; border: 1px solid #444; padding: 10px; overflow-x:auto; background-color: #1c1f28; color: #fff; min-height: 200px; }
+canvas { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+
+.slide { 
+    border: 1px solid #555; 
+    margin: 10px auto; 
+    padding: 20px; 
+    background: #1c1f28; 
+    width: 90%; 
+    max-width: 600px; 
+    min-height: 300px; 
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    display: none;
+    color: #fff;
+}
+.slide p { margin: 5px 0; font-size: 1rem; }
+
+.nav-buttons { text-align: center; margin-top: 10px; }
+.nav-buttons button { padding: 10px 20px; font-size: 1rem; }
+</style>
 </head>
 <body>
-  <main class="app" role="application" aria-label="Calculator">
-    <div class="top">
-      <h1>Calculator</h1>
-      <div class="credits" id="status">Offline-ready</div>
-    </div>
+<h2>Offline Document Viewer</h2>
 
-    <section class="display" aria-live="polite">
-      <div class="expr" id="expr"></div>
-      <div class="value" id="value">0</div>
-    </section>
+<input type="file" id="pdfFile" accept=".pdf" style="display:none"/>
+<button onclick="document.getElementById('pdfFile').click()">PDF öffnen</button>
 
-    <section class="keys" aria-label="Calculator keypad">
-      <button data-key="Escape" data-variant="danger" title="Clear (Esc)">AC</button>
-      <button data-key="Backspace" title="Backspace">⌫</button>
-      <button data-op="%" data-variant="op" title="Percent">%</button>
-      <button data-op="/" data-variant="op" title="Divide">÷</button>
-      <button data-num="7">7</button>
-      <button data-num="8">8</button>
-      <button data-num="9">9</button>
-      <button data-op="*" data-variant="op" title="Multiply">×</button>
-      <button data-num="4">4</button>
-      <button data-num="5">5</button>
-      <button data-num="6">6</button>
-      <button data-op="-" data-variant="op" title="Minus">−</button>
-      <button data-num="1">1</button>
-      <button data-num="2">2</button>
-      <button data-num="3">3</button>
-      <button data-op="+" data-variant="op" title="Plus">+</button>
-      <button data-num="0" class="span-2">0</button>
-      <button data-dot=".">.</button>
-      <button data-equals="=" data-variant="accent" title="Equals (=)">=</button>
-      <button data-paren="(" title="Left parenthesis">(</button>
-      <button data-paren=")" title="Right parenthesis">)</button>
-      <button data-op="^" data-variant="op" title="Power">^</button>
-      <button data-sign="±" title="Toggle sign">±</button>
-    </section>
+<input type="file" id="docxFile" accept=".docx" style="display:none"/>
+<button onclick="document.getElementById('docxFile').click()">Word öffnen</button>
 
-    <div class="footer">
-      <span>Keys: 0–9 • . • + − × ÷ • ( ) • % ^ • Enter • Esc • Backspace</span>
-      <div class="switcher">
-        <button class="switch" id="copy">Copy</button>
-      </div>
-    </div>
-  </main>
+<input type="file" id="xlsxFile" accept=".xlsx" style="display:none"/>
+<button onclick="document.getElementById('xlsxFile').click()">Excel öffnen</button>
 
-  <script>
-    // --- Calculator logic embedded ---
-    const valueEl = document.getElementById('value');
-    const exprEl = document.getElementById('expr');
-    const statusEl = document.getElementById('status');
-    let expr='', current='0', lastAction=null;
-    const isOp = c => ['+','-','*','/','%','^'].includes(c);
-    function update(){exprEl.textContent=expr; valueEl.textContent=current;}
-    function pushNum(n){if(lastAction==='eq'){expr='';current='0';} if(current==='0'||lastAction==='op'||lastAction==='parenClose') current=String(n); else current+=String(n); lastAction='num'; update();}
-    function pushDot(){if(lastAction==='eq'){expr='';current='0';} if(!current.includes('.')) current+=(current===''?'0.':'.'); lastAction='dot'; update();}
-    function toggleSign(){if(current==='0') return; current=current.startsWith('-')?current.slice(1):'-'+current; update();}
-    function pushOp(op){if(lastAction==='eq'){expr=current;} if(isOp(expr.slice(-1))) expr=expr.slice(0,-1); else if(['num','dot','parenClose'].includes(lastAction)) expr+=current; expr+=op; lastAction='op'; update();}
-    function pushParen(p){if(p==='('){if(['num','dot','parenClose'].includes(lastAction)) expr+=current+'*'; expr+='('; lastAction='parenOpen';} else {if(['op','parenOpen'].includes(lastAction)) expr+='0'; expr+=(lastAction==='eq'?current:current)+')'; lastAction='parenClose';} update();}
-    function backspace(){if(lastAction==='eq'){expr='';current='0';lastAction=null;update();return;} if(current.length>1) current=current.slice(0,-1); else current='0'; update();}
-    function clearAll(){expr=''; current='0'; lastAction=null; update();}
-    function equals(){let full=expr; if(!['op','parenOpen'].includes(lastAction)) full+=current; const opens=(full.match(/\(/g)||[]).length; const closes=(full.match(/\)/g)||[]).length; if(opens>closes) full+=')'.repeat(opens-closes); try{const result=compute(full); current=formatNumber(result); expr=full+' ='; lastAction='eq'; update();}catch{current='Error'; lastAction='eq'; update();}}
-    function formatNumber(n){if(!isFinite(n)) return 'Error'; const abs=Math.abs(n); if(abs!==0&&(abs<1e-6||abs>=1e12)) return n.toExponential(8).replace(/\.0+e/,'e'); return n.toLocaleString(undefined,{maximumFractionDigits:12});}
-    function compute(s){if(!/^[-+*/%^(). \d]+$/.test(s)) throw new Error(); const tokens=[]; const re=/\d*\.?\d+|[()+\-*/%^]/g; let m; while((m=re.exec(s))){tokens.push(m[0]);} for(let i=0;i<tokens.length;i++){if(tokens[i]==='-'&&(i===0||(isOp(tokens[i-1])||tokens[i-1]==='('))){tokens[i]='u-';}} const prec={'u-':4,'^':3,'*':2,'/':2,'%':2,'+':1,'-':1}; const rightAssoc={'^':true,'u-':true}; const out=[],stack=[]; for(const t of tokens){if(/\d/.test(t[0])) out.push(Number(t)); else if(t in prec){while(stack.length){const top=stack[stack.length-1]; if(top in prec&&((rightAssoc[t]&&prec[t]<prec[top])||(!rightAssoc[t]&&prec[t]<=prec[top]))){out.push(stack.pop());} else break;} stack.push(t);} else if(t==='(') stack.push(t); else if(t===')'){while(stack.length&&stack[stack.length-1]!=='(') out.push(stack.pop()); if(stack.pop()!=='(') throw new Error();} } while(stack.length){const x=stack.pop(); if(x==='('||x===')') throw new Error(); out.push(x);} const st=[]; for(const t of out){if(typeof t==='number') st.push(t); else if(t==='u-') st.push(-st.pop()); else {const b=st.pop(); const a=st.pop(); let r; switch(t){case '+':r=a+b;break;case '-':r=a-b;break;case '*':r=a*b;break;case '/':r=b===0?Infinity:a/b;break;case '%':r=a%b;break;case '^':r=Math.pow(a,b);break;default:throw new Error();} st.push(r);} } if(st.length!==1) throw new Error(); return st[0];}
-    document.querySelectorAll('button[data-num]').forEach(b=>b.addEventListener('click',()=>pushNum(b.dataset.num),{passive:true}));
-    document.querySelectorAll('button[data-op]').forEach(b=>b.addEventListener('click',()=>pushOp(b.dataset.op),{passive:true}));
-    document.querySelector('button[data-dot]')?.addEventListener('click',pushDot,{passive:true});
-    document.querySelector('button[data-equals]')?.addEventListener('click',equals,{passive:true});
-    document.querySelector('button[data-sign]')?.addEventListener('click',toggleSign,{passive:true});
-    document.querySelector('button[title="Clear (Esc)"]')?.addEventListener('click',clearAll,{passive:true});
-    document.querySelector('button[title="Backspace"]')?.addEventListener('click',backspace,{passive:true});
-    document.querySelectorAll('button[data-paren]').forEach(b=>b.addEventListener('click',()=>pushParen(b.dataset.paren),{passive:true}));
-    document.getElementById('copy').addEventListener('click',()=>{const txt=valueEl.textContent||''; navigator.clipboard?.writeText(txt).then(()=>{flash('Copied');}).catch(()=>{flash('Copy failed');})});
-    function flash(msg){statusEl.textContent=msg; setTimeout(()=>statusEl.textContent='Offline-ready',1200);}
-    window.addEventListener('keydown',(e)=>{const k=e.key;if(/^[0-9]$/.test(k)){pushNum(k);return;} if(k==='.') {pushDot();return;} if(['+','-','*','/','%','^'].includes(k)){pushOp(k);return;} if(k==='('||k===')'){pushParen(k);return;} if(k==='Enter'||k==='='){e.preventDefault();equals();return;} if(k==='Backspace'){backspace();return;} if(k==='Escape'){clearAll();return;} });
-    update();
+<input type="file" id="pptxFile" accept=".pptx" style="display:none"/>
+<button onclick="document.getElementById('pptxFile').click()">PowerPoint öffnen</button>
 
-    // --- Service Worker for offline GitHub Pages ---
-    if('serviceWorker' in navigator){
-      navigator.serviceWorker.register('sw.js').then(()=>console.log('SW registered')).catch(console.error);
+<input type="file" id="odfFile" accept=".odt,.ods,.odp" style="display:none"/>
+<button onclick="document.getElementById('odfFile').click()">ODF öffnen</button>
+
+<div id="viewer">Bitte eine Datei hochladen...</div>
+<div class="nav-buttons" id="pptNav" style="display:none;">
+    <button id="prevSlide">← Zurück</button>
+    <button id="nextSlide">Weiter →</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.12.313/pdf.min.js"></script>
+<script src="https://unpkg.com/docx-preview@1.0.1/dist/docx-preview.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://webodf.org/webodf.js"></script>
+
+<script>
+const viewer = document.getElementById('viewer');
+const pptNav = document.getElementById('pptNav');
+let slides = [];
+let currentSlide = 0;
+
+function showSlide(index) {
+    if(slides.length === 0) return;
+    slides.forEach((s,i)=> s.style.display = i===index ? 'block' : 'none');
+}
+
+// PDF
+document.getElementById('pdfFile').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const data = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({data}).promise;
+    const page = await pdf.getPage(1);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const viewport = page.getViewport({scale: 1.5});
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    await page.render({canvasContext: ctx, viewport}).promise;
+    viewer.innerHTML = '';
+    viewer.appendChild(canvas);
+    pptNav.style.display = 'none';
+});
+
+// DOCX
+document.getElementById('docxFile').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const buffer = await file.arrayBuffer();
+    const docx = new DocxPreview(buffer);
+    viewer.innerHTML = '';
+    docx.render(viewer);
+    pptNav.style.display = 'none';
+});
+
+// XLSX
+document.getElementById('xlsxFile').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, {type:"array"});
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    viewer.innerHTML = XLSX.utils.sheet_to_html(sheet);
+    pptNav.style.display = 'none';
+});
+
+// PPTX
+document.getElementById('pptxFile').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const buffer = await file.arrayBuffer();
+    const zip = await JSZip.loadAsync(buffer);
+    viewer.innerHTML = '';
+    slides = [];
+
+    const slideFiles = Object.keys(zip.files).filter(f => f.startsWith('ppt/slides/slide') && f.endsWith('.xml'));
+    if(slideFiles.length === 0){
+        viewer.innerHTML = "<p>Keine Folien gefunden oder PPTX nicht kompatibel.</p>";
+        pptNav.style.display = 'none';
+        return;
     }
-  </script>
+
+    for (let slideFile of slideFiles) {
+        try {
+            const slideData = await zip.files[slideFile].async('text');
+            const texts = [...slideData.matchAll(/<a:t>(.*?)<\/a:t>/g)].map(m=>m[1]);
+            const div = document.createElement('div');
+            div.className = 'slide';
+            div.innerHTML = texts.length>0 ? texts.map(t=>`<p>${t}</p>`).join('') : '<p>(leere Folie)</p>';
+            viewer.appendChild(div);
+            slides.push(div);
+        } catch(err){
+            console.error('Fehler beim Lesen der Folie', err);
+        }
+    }
+
+    currentSlide=0;
+    showSlide(currentSlide);
+    pptNav.style.display = 'block';
+});
+
+document.getElementById('prevSlide').addEventListener('click', ()=>{ if(currentSlide>0) currentSlide--; showSlide(currentSlide); });
+document.getElementById('nextSlide').addEventListener('click', ()=>{ if(currentSlide<slides.length-1) currentSlide++; showSlide(currentSlide); });
+
+// ODF
+document.getElementById('odfFile').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+        viewer.innerHTML = '';
+        const odfCanvas = new odf.OdfCanvas(viewer);
+        odfCanvas.load(reader.result);
+        pptNav.style.display = 'none';
+    };
+    reader.readAsArrayBuffer(file);
+});
+</script>
 </body>
 </html>
