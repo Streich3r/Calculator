@@ -1,5 +1,5 @@
 
-# Nachrichten Swipe Webseite
+# Calculator Webseite
 
 Simple Calculator for offline using
 
