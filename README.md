@@ -8,4 +8,5 @@ Simple Calculator for offline using
 - Offline-ready
 - touch/mouse/keyboard-ready
 - Copy-ready
+- PWA-ready
 - Dark Mode
