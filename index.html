@@ -2,12 +2,29 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <link rel="icon" type="image/png" href="icon-512.png">
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
   <title>Offline Calculator</title>
   <meta name="description" content="A simple, offline-ready calculator that works offline and as a PWA." />
-  <link rel="manifest" href="manifest.json">
+  <!-- Manifest für PWA -->
+  <link rel="manifest" href="manifest.webmanifest">
+
+  <!-- Favicons für Browser -->
+  <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+
+  <!-- Apple Touch Icon (iOS Homescreen) -->
+  <link rel="apple-touch-icon" href="apple-icon.png">
+
+  <!-- Theme-Farben für Browser-UI -->
+  <meta name="theme-color" content="#0b0d12">
+  <meta name="background-color" content="#0b0d12">
+
+  <!-- Optional: Windows Tile Icons -->
+  <meta name="msapplication-TileImage" content="icon-192.png">
+  <meta name="msapplication-TileColor" content="#0b0d12">
+  
   <style>
     :root{--bg:#0b0d12;--panel:#121622;--btn:#1b2232;--btn-alt:#24304a;--text:#e9edf5;--muted:#95a3bf;--accent:#6aa1ff;--danger:#ff6b6b;--radius:18px;--shadow:0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05);}
     @media (prefers-color-scheme: light){:root{--bg:#f5f7fb;--panel:#ffffff;--btn:#f1f4fb;--btn-alt:#e7ecf8;--text:#0b0d12;--muted:#5a6782;--accent:#2f6dff;--danger:#d14343;}}
