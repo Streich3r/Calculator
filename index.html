@@ -19,56 +19,56 @@
   <meta name="msapplication-TileColor" content="#0b0d12">
   
   
- <style>
+<style>
     :root{--bg:#0b0d12;--panel:#121622;--btn:#1b2232;--btn-alt:#24304a;--text:#e9edf5;--muted:#95a3bf;--accent:#6aa1ff;--danger:#ff6b6b;--radius:18px;--shadow:0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05);}
     @media (prefers-color-scheme: light){:root{--bg:#f5f7fb;--panel:#ffffff;--btn:#f1f4fb;--btn-alt:#e7ecf8;--text:#0b0d12;--muted:#5a6782;--accent:#2f6dff;--danger:#d14343;}}
     *{box-sizing:border-box} html,body{height:100%} body{margin:0;font:18px system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial;background:radial-gradient(1200px 800px at 80% -20%, rgba(106,161,255,.15), transparent 60%),var(--bg);color:var(--text);display:grid;place-items:center;-webkit-tap-highlight-color: transparent;}
-    /* Breite im Normal-Modus: min(460px, 95vw) */
-    .app{width:min(460px,95vw);padding:18px;border-radius:var(--radius);background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01)),var(--panel);box-shadow:var(--shadow); transition: width 0.3s ease;}
-    /* Breite im Advanced-Modus: min(700px, 95vw) */
-    .app.advanced{width:min(700px,95vw);} 
+    
+    /* Die Breite bleibt im Advanced-Modus KONSTANT */
+    .app{width:min(460px,95vw);padding:18px;border-radius:var(--radius);background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01)),var(--panel);box-shadow:var(--shadow); transition: all 0.3s ease;}
+    
     .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px} h1{font-size:20px;margin:0;letter-spacing:.3px;font-weight:700} .credits{font-size:12px;color:var(--muted)}
     .display{position:relative;border-radius:14px;background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.06));padding:20px;min-height:100px;box-shadow:inset 0 2px 12px rgba(0,0,0,.25)}
     .expr{font-size:15px;color:var(--muted);min-height:20px;word-wrap:break-word} .value{font-size:38px;line-height:1.3;font-variant-numeric:tabular-nums;word-wrap:break-word}
     
-    /* NEU: Flex-Container für die beiden Tastenfelder */
-    .keys-container{
-        display:flex; 
-        gap:12px; 
-        margin-top:14px;
-    }
+    .keys-container{margin-top:14px;} 
     
     /* Standard-Tastenfeld (4 Spalten) */
-    .keys{
-        display:grid;
-        grid-template-columns:repeat(4,1fr);
-        gap:12px; 
-        flex-grow: 1; /* Nimmt im Normalmodus die volle Breite ein */
-        min-width: 320px; /* Stellt sicher, dass die Tasten nicht zu klein werden */
-    } 
-    /* Im Advanced-Modus: Festgelegte Breite für 4 Spalten */
-    .app.advanced .keys{
-        flex-grow: 0;
-        flex-basis: 320px; /* 4 Spalten * ca. 70px Breite/Padding/Gap */
-    }
+    .keys{display:grid;grid-template-columns:repeat(4,1fr);gap:12px; } 
     
-    /* Advanced Tastenfeld (3 Spalten) */
+    /* Advanced Tastenfeld (NEU: 6 Spalten für 3x4 Layout, unsichtbar/minimal) */
     .keys.advanced-keys{
-        grid-template-columns:repeat(3,1fr); 
+        grid-template-columns:repeat(6,1fr); /* 6 Spalten */
         gap:12px;
-        display:none;
-        /* Festgelegte Breite für 3 Spalten */
-        flex-basis: 220px; /* 3 Spalten * ca. 70px Breite/Padding/Gap */
-        flex-shrink: 0;
-    }
-    /* Im Advanced-Modus sichtbar */
-    .app.advanced .keys.advanced-keys{
-        display:grid;
+        margin-bottom: 0; /* Abstand wird von der Höhe kontrolliert */
+        display: grid; /* Immer Grid, aber durch Höhe versteckt */
+        /* Animation/Verstecken */
+        max-height: 0;
+        opacity: 0;
+        overflow: hidden;
+        transition: max-height 0.4s ease, opacity 0.4s ease, margin-bottom 0.4s ease;
     }
     
-    button{appearance:none;border:none;border-radius:16px;background:var(--btn);color:var(--text);padding:22px;font-size:22px;cursor:pointer;box-shadow:var(--shadow);transition: transform .06s ease, filter .2s ease;touch-action: manipulation;} button:active{transform:scale(0.96)} button:focus-visible{outline:2px solid var(--accent);outline-offset:2px} button[data-variant="op"]{background:var(--btn-alt)} button[data-variant="accent"]{background:linear-gradient(180deg, rgba(106,161,255,.22), rgba(106,161,255,.1));} button[data-variant="danger"]{background:linear-gradient(180deg, rgba(255,107,107,.25), rgba(255,107,107,.12));} .span-2{grid-column:span 2} .sr-only{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+    /* Advanced Modus: Tastenfeld wird sichtbar */
+    .app.advanced .keys.advanced-keys{
+        max-height: 120px; /* Platz für 2 Reihen von Advanced-Tasten */
+        opacity: 1;
+        margin-bottom: 12px; /* Setzt den Abstand ZURÜCK zum Standardfeld */
+    }
+    
+    /* Standard Button Styling */
+    button{appearance:none;border:none;border-radius:16px;background:var(--btn);color:var(--text);padding:22px;font-size:22px;cursor:pointer;box-shadow:var(--shadow);transition: transform .06s ease, filter .2s ease;touch-action: manipulation;} 
+    
+    /* ⭐ KORREKTUR: Advanced Key Styling - Kleinere Größe und Schrift */
+    .advanced-key{
+        padding: 12px; /* Weniger Padding */
+        font-size: 16px; /* Kleinere Schrift */
+        /* NEU: Spannt 2 Spalten im 6-Spalten-Grid */
+        grid-column: span 2; 
+    }
+    
+    button:active{transform:scale(0.96)} button:focus-visible{outline:2px solid var(--accent);outline-offset:2px} button[data-variant="op"]{background:var(--btn-alt)} button[data-variant="accent"]{background:linear-gradient(180deg, rgba(106,161,255,.22), rgba(106,161,255,.1));} button[data-variant="danger"]{background:linear-gradient(180deg, rgba(255,107,107,.25), rgba(255,107,107,.12));} .span-2{grid-column:span 2} .sr-only{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
     .footer{margin-top:14px;display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:12px;flex-wrap:wrap} .switcher{display:flex;gap:8px} .switch{background:transparent;box-shadow:none;border:1px solid rgba(255,255,255,.08);padding:8px 10px;font-size:12px}
-    .advanced-key{font-size:18px; padding:18px;}
 </style>
 </head>
 <body>
