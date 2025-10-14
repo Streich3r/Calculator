@@ -156,9 +156,12 @@
           .replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−')
           .replace(/\^/g, '^').replace(/yroot/g, 'ⁿ√')
           .replace(/logx/g, 'logᵪ');
+      
 
       // Ersetze Funktionsnamen durch ihre Display-Form
       displayExpr = displayExpr.replace(/pow2\((.*?)\)/g, '$1²');
+      displayExpr = displayExpr.replace(/sqrt\(/g, '√('); 
+  
 
       exprEl.textContent = displayExpr;
       valueEl.textContent = currentNumber;
@@ -359,52 +362,67 @@
         clearAll();
     }
 
-    // --- Berechnungslogik (erweitert für neue Funktionen) ---
 
-    function equals(){
-      let exprToCalc = expr;
-      if (exprToCalc === '' || exprToCalc.endsWith('=')) return;
-      
-      const opens = (exprToCalc.match(/\(/g)||[]).length;
-      const closes = (exprToCalc.match(/\)/g)||[]).length;
-      if(opens > closes) exprToCalc += ')'.repeat(opens - closes);
-      
-      while(isOp(exprToCalc.slice(-1)) || exprToCalc.slice(-1) === '('){
+ // --- Berechnungslogik (erweitert für neue Funktionen) ---
+
+function equals(){
+    let exprToCalc = expr;
+    if (exprToCalc === '' || exprToCalc.endsWith('=')) return;
+    
+    const opens = (exprToCalc.match(/\(/g)||[]).length;
+    const closes = (exprToCalc.match(/\)/g)||[]).length;
+    
+    // ⭐ ANPASSUNG: Fehlende Klammern zur Berechnung und zur Anzeige hinzufügen
+    const neededCloses = opens - closes;
+    if(neededCloses > 0) {
+        const closingParens = ')'.repeat(neededCloses);
+        exprToCalc += closingParens; // Für die Berechnung
+        expr += closingParens;      // Für die Anzeige
+    }
+    
+    // Entferne abschließende Operatoren oder öffnende Klammern vor der Berechnung
+    while(isOp(exprToCalc.slice(-1)) || exprToCalc.slice(-1) === '('){
         exprToCalc = exprToCalc.slice(0, -1);
-      }
+        // ⭐ Anpassung: Auch von der Anzeige-Variable entfernen
+        expr = expr.slice(0, -1);
+    }
 
-      let finalExprForCalc = exprToCalc.replace(/−/g, '-');
-      
-      const parts = finalExprForCalc.split('=');
-      if (parts.length > 1) {
-          finalExprForCalc = parts.pop(); 
-          if (lastResult !== null) {
-               const startChar = finalExprForCalc.charAt(0);
-               if (isOp(startChar) || startChar === '(') {
-                   finalExprForCalc = lastResult + finalExprForCalc;
-               }
-          }
-      }
-      
-      try{
+    let finalExprForCalc = exprToCalc.replace(/−/g, '-');
+    
+    const parts = finalExprForCalc.split('=');
+    if (parts.length > 1) {
+        finalExprForCalc = parts.pop(); 
+        if (lastResult !== null) {
+            const startChar = finalExprForCalc.charAt(0);
+            if (isOp(startChar) || startChar === '(') {
+                finalExprForCalc = lastResult + finalExprForCalc;
+            }
+        }
+    } 
+    
+    // Der Rest der Funktion (try/catch Block) muss beibehalten werden,
+    // um das Ergebnis zu berechnen und die finale Anzeige zu aktualisieren.
+    try{
         const result = compute(finalExprForCalc); 
         
         currentNumber = formatNumber(result);
         
+        // Die Variable 'expr' enthält jetzt den korrigierten Ausdruck (mit Klammern)
+        // und wird hier final für die Anzeige vorbereitet.
         expr = expr.replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−') + '=' + currentNumber;
         
         isResult = true;
         lastResult = result; 
         updateDisplay();
-      }catch(e){
+    }catch(e){
         currentNumber = 'Error'; 
         expr = expr.replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−') + '=';
         isResult = true;
         lastResult = null;
         updateDisplay();
         console.error("Calculation Error:", e);
-      }
     }
+}
 
     function formatNumber(n){if(!isFinite(n)) return 'Error'; const abs=Math.abs(n); if(abs!==0&&(abs<1e-6||abs>=1e12)) return n.toExponential(8).replace(/\.0+e/,'e'); return n.toLocaleString(undefined,{maximumFractionDigits:12});}
     
