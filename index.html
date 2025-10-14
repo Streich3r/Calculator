@@ -36,36 +36,34 @@
     /* Standard-Tastenfeld (4 Spalten) */
     .keys{display:grid;grid-template-columns:repeat(4,1fr);gap:12px; } 
     
-    /* Advanced Tastenfeld (NEU: 6 Spalten für 3x4 Layout, unsichtbar/minimal) */
-    .keys.advanced-keys{
-        grid-template-columns:repeat(6,1fr); /* 6 Spalten */
-        gap:12px;
-        margin-bottom: 0; /* Abstand wird von der Höhe kontrolliert */
-        display: grid; /* Immer Grid, aber durch Höhe versteckt */
-        /* Animation/Verstecken */
-        max-height: 0;
-        opacity: 0;
-        overflow: hidden;
-        transition: max-height 0.4s ease, opacity 0.4s ease, margin-bottom 0.4s ease;
-    }
+ /* Advanced Tastenfeld (NEU: 4 Spalten) */
+.keys.advanced-keys{
+    grid-template-columns:repeat(4,1fr); /* Jetzt 4 Spalten, passend zum Standardfeld */
+    gap:12px;
+    margin-bottom: 0;
+    display: grid; 
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease, opacity 0.4s ease, margin-bottom 0.4s ease;
+}
     
-    /* Advanced Modus: Tastenfeld wird sichtbar */
-    .app.advanced .keys.advanced-keys{
-        max-height: 120px; /* Platz für 2 Reihen von Advanced-Tasten */
-        opacity: 1;
-        margin-bottom: 12px; /* Setzt den Abstand ZURÜCK zum Standardfeld */
-    }
+/* Advanced Modus: Tastenfeld wird sichtbar */
+.app.advanced .keys.advanced-keys{
+    max-height: 200px; /* Platz für 3 Reihen Tasten + Gaps */
+    opacity: 1;
+    margin-bottom: 12px;
+}
     
     /* Standard Button Styling */
     button{appearance:none;border:none;border-radius:16px;background:var(--btn);color:var(--text);padding:22px;font-size:22px;cursor:pointer;box-shadow:var(--shadow);transition: transform .06s ease, filter .2s ease;touch-action: manipulation;} 
     
-    /* ⭐ KORREKTUR: Advanced Key Styling - Kleinere Größe und Schrift */
-    .advanced-key{
-        padding: 12px; /* Weniger Padding */
-        font-size: 16px; /* Kleinere Schrift */
-        /* NEU: Spannt 2 Spalten im 6-Spalten-Grid */
-        grid-column: span 2; 
-    }
+/* ⭐ KORREKTUR: Advanced Key Styling - Kleinere Größe und Schrift */
+.advanced-key{
+    padding: 12px;
+    font-size: 16px; 
+    grid-column: span 1; /* Jede Advanced-Taste nimmt nur 1 Spalte ein */
+}
     
     button:active{transform:scale(0.96)} button:focus-visible{outline:2px solid var(--accent);outline-offset:2px} button[data-variant="op"]{background:var(--btn-alt)} button[data-variant="accent"]{background:linear-gradient(180deg, rgba(106,161,255,.22), rgba(106,161,255,.1));} button[data-variant="danger"]{background:linear-gradient(180deg, rgba(255,107,107,.25), rgba(255,107,107,.12));} .span-2{grid-column:span 2} .sr-only{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
     .footer{margin-top:14px;display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:12px;flex-wrap:wrap} .switcher{display:flex;gap:8px} .switch{background:transparent;box-shadow:none;border:1px solid rgba(255,255,255,.08);padding:8px 10px;font-size:12px}
