@@ -84,300 +84,316 @@
   </main>
 
 <script>
-    // --- Calculator logic embedded ---
-    const valueEl = document.getElementById('value');
-    const exprEl = document.getElementById('expr');
-    const statusEl = document.getElementById('status');
-    
-    // Neue Struktur: expr speichert den gesamten Ausdruck
-    // currentNumber speichert die Zahl, die gerade eingegeben wird (als String)
-    let expr = '', currentNumber = '0';
-    let isResult = false; // Flag, um zu wissen, ob das aktuelle 'expr' ein Ergebnis ist
-    
-    const isOp = c => ['+','-','*','/','%','^'].includes(c);
-    
-    function updateDisplay(){
-      exprEl.textContent = expr.replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−');
-      valueEl.textContent = currentNumber;
-    }
+    // --- Calculator logic embedded ---
+    const valueEl = document.getElementById('value');
+    const exprEl = document.getElementById('expr');
+    const statusEl = document.getElementById('status');
+    
+    // Neue Struktur: expr speichert den gesamten Ausdruck
+    // currentNumber speichert die Zahl, die gerade eingegeben wird (als String)
+    let expr = '', currentNumber = '0';
+    let isResult = false; // Flag, um zu wissen, ob das aktuelle 'expr' ein Ergebnis ist
+    
+    const isOp = c => ['+','-','*','/','%','^'].includes(c);
+    
+    function updateDisplay(){
+      exprEl.textContent = expr.replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−');
+      valueEl.textContent = currentNumber;
+    }
 
-    // --- Logik zur Handhabung von Zahlen und Operatoren ---
+    // --- Logik zur Handhabung von Zahlen und Operatoren ---
 
-    function pushNum(n){
-      if(isResult){ expr = ''; isResult = false; }
+    function pushNum(n){
+      if(isResult){ expr = ''; isResult = false; }
 
-      // Wenn die letzte Eingabe ein Operator oder eine öffnende Klammer war, starten wir eine neue Zahl
-      const lastChar = expr.slice(-1);
-      if(isOp(lastChar) || lastChar === '('){
-        expr += String(n);
-        currentNumber = String(n);
-      } 
-      // Wenn wir gerade eine Zahl bearbeiten
-      else {
-        // Entferne die alte Zahl aus dem Ausdruck (z.B. wenn von "0" zu "1" gewechselt wird)
-        if(currentNumber === '0'){
-          expr = expr.slice(0, expr.length - currentNumber.length);
-        } else {
-          expr = expr.slice(0, expr.length - currentNumber.length);
-        }
-        
-        // Aktualisiere die aktuelle Zahl und hänge sie an den Ausdruck an
-        if(currentNumber === '0') currentNumber = String(n);
-        else currentNumber += String(n);
-        
-        expr += currentNumber;
-      }
-      updateDisplay();
-    }
+      // Wenn die letzte Eingabe ein Operator oder eine öffnende Klammer war, starten wir eine neue Zahl
+      const lastChar = expr.slice(-1);
+      if(isOp(lastChar) || lastChar === '('){
+        expr += String(n);
+        currentNumber = String(n);
+      } 
+      // Wenn wir gerade eine Zahl bearbeiten
+      else {
+        // Entferne die alte Zahl aus dem Ausdruck (z.B. wenn von "0" zu "1" gewechselt wird)
+        if(currentNumber === '0'){
+          expr = expr.slice(0, expr.length - currentNumber.length);
+        } else {
+          expr = expr.slice(0, expr.length - currentNumber.length);
+        }
+        
+        // Aktualisiere die aktuelle Zahl und hänge sie an den Ausdruck an
+        if(currentNumber === '0') currentNumber = String(n);
+        else currentNumber += String(n);
+        
+        expr += currentNumber;
+      }
+      updateDisplay();
+    }
 
-    function pushDot(){
-      if(isResult){ expr = '0'; isResult = false; }
+    function pushDot(){
+      if(isResult){ expr = '0'; isResult = false; }
 
-      const lastChar = expr.slice(-1);
+      const lastChar = expr.slice(-1);
 
-      // Starte mit 0. wenn der Ausdruck leer ist oder ein Operator/Klammer davor steht
-      if(expr === '' || isOp(lastChar) || lastChar === '('){
-        expr += '0.';
-        currentNumber = '0.';
-      } 
-      // Wenn wir gerade eine Zahl bearbeiten und noch keinen Punkt haben
-      else if(!currentNumber.includes('.')){
-        // Entferne die alte Zahl aus dem Ausdruck
-        expr = expr.slice(0, expr.length - currentNumber.length);
-        currentNumber += '.';
-        expr += currentNumber;
-      }
-      updateDisplay();
-    }
+      // Starte mit 0. wenn der Ausdruck leer ist oder ein Operator/Klammer davor steht
+      if(expr === '' || isOp(lastChar) || lastChar === '('){
+        expr += '0.';
+        currentNumber = '0.';
+      } 
+      // Wenn wir gerade eine Zahl bearbeiten und noch keinen Punkt haben
+      else if(!currentNumber.includes('.')){
+        // Entferne die alte Zahl aus dem Ausdruck
+        expr = expr.slice(0, expr.length - currentNumber.length);
+        currentNumber += '.';
+        expr += currentNumber;
+      }
+      updateDisplay();
+    }
 
-    function pushOp(op){
-      if(isResult) isResult = false;
-      
-      // Ersetze letzten Operator, wenn bereits einer vorhanden ist
-      if(isOp(expr.slice(-1))){
-        expr = expr.slice(0,-1) + op;
-      } 
-      // Füge den Operator hinzu und setze die aktuelle Zahl zurück (für die nächste Eingabe)
-      else if(expr !== ''){
-        expr += op;
-        currentNumber = '0'; // Setze zurück, damit die nächste Zahl den Ausdruck beginnt
-      }
-      updateDisplay();
-    }
-    
-    function pushParen(p){
-      if(isResult){ expr = ''; isResult = false; }
-      
-      const lastChar = expr.slice(-1);
-      
-      if(p === '('){
-        // Füge * ein, wenn eine Zahl oder schließende Klammer davor steht (implizite Multiplikation)
-        if(/[\d.)]/.test(lastChar) && expr !== '0') expr += '*';
-        expr += '(';
-      } else if (p === ')'){
-        // Schließende Klammern nur hinzufügen, wenn die Klammernbalance es erlaubt
-        const opens = (expr.match(/\(/g) || []).length;
-        const closes = (expr.match(/\)/g) || []).length;
-        
-        // Nur schließen, wenn geöffnet wurde und der letzte Eintrag keine Operation ist
-        if(opens > closes && !isOp(lastChar) && lastChar !== '('){
-          expr += ')';
-        }
-      }
-      currentNumber = '0';
-      updateDisplay();
-    }
+    // ⭐ ANGEPASST: Übernimmt das Ergebnis, wenn ein Operator nach "=" gedrückt wird
+    function pushOp(op){
+      if(isResult) {
+          // NEU: Den aktuellen Anzeigewert (das Ergebnis) übernehmen
+          // Wir verwenden currentNumber, weil es die formatierte Zahl (ohne Tausender-Trennzeichen) von equals() enthält.
+          // Wir müssen das Minuszeichen für die interne expr-Verarbeitung wieder von '−' auf '-' ändern.
+          expr = expr + op; // expr enthält nun den berechneten Wert
+          isResult = false;
+          currentNumber = '0'; 
+          updateDisplay();
+          return;
+      }
+      
+      // Bestehende Logik, wenn isResult false ist
+      // Ersetze letzten Operator, wenn bereits einer vorhanden ist
+      if(isOp(expr.slice(-1))){
+        expr = expr.slice(0,-1) + op;
+      } 
+      // Füge den Operator hinzu und setze die aktuelle Zahl zurück (für die nächste Eingabe)
+      else if(expr !== ''){
+        expr += op;
+        currentNumber = '0'; // Setze zurück, damit die nächste Zahl den Ausdruck beginnt
+      }
+      updateDisplay();
+    }
+    
+    function pushParen(p){
+      if(isResult){ expr = ''; isResult = false; }
+      
+      const lastChar = expr.slice(-1);
+      
+      if(p === '('){
+        // Füge * ein, wenn eine Zahl oder schließende Klammer davor steht (implizite Multiplikation)
+        if(/[\d.)]/.test(lastChar) && expr !== '0') expr += '*';
+        expr += '(';
+      } else if (p === ')'){
+        // Schließende Klammern nur hinzufügen, wenn die Klammernbalance es erlaubt
+        const opens = (expr.match(/\(/g) || []).length;
+        const closes = (expr.match(/\)/g) || []).length;
+        
+        // Nur schließen, wenn geöffnet wurde und der letzte Eintrag keine Operation ist
+        if(opens > closes && !isOp(lastChar) && lastChar !== '('){
+          expr += ')';
+        }
+      }
+      currentNumber = '0';
+      updateDisplay();
+    }
 
-    function backspace(){
-      if(isResult){ clearAll(); return; }
+    function backspace(){
+      if(isResult){ clearAll(); return; }
 
-      if(expr.length === 0 || expr === '0') {
-        clearAll(); return;
-      }
-      
-      expr = expr.slice(0, -1);
-      
-      // Versuche, die neue aktuelle Zahl zu bestimmen, wenn eine Zahl gelöscht wurde
-      if(!isOp(expr.slice(-1)) && expr.slice(-1) !== '(' && expr.slice(-1) !== ')'){
-        const match = expr.match(/(\d+\.?\d*|\.\d+)$/);
-        currentNumber = match ? match[0] : '0';
-      } else {
-        currentNumber = '0';
-      }
-      
-      if(expr.length === 0) currentNumber = '0';
-      updateDisplay();
-    }
-    
-    function toggleSign(){
-      if(isResult || currentNumber === '0') return;
+      if(expr.length === 0 || expr === '0') {
+        clearAll(); return;
+      }
+      
+      expr = expr.slice(0, -1);
+      
+      // Versuche, die neue aktuelle Zahl zu bestimmen, wenn eine Zahl gelöscht wurde
+      if(!isOp(expr.slice(-1)) && expr.slice(-1) !== '(' && expr.slice(-1) !== ')'){
+        const match = expr.match(/(\d+\.?\d*|\.\d+)$/);
+        currentNumber = match ? match[0] : '0';
+      } else {
+        currentNumber = '0';
+      }
+      
+      if(expr.length === 0) currentNumber = '0';
+      updateDisplay();
+    }
+    
+    function toggleSign(){
+      if(isResult || currentNumber === '0') return;
 
-      // Nur das Vorzeichen der aktuellen Zahl ändern
-      if(currentNumber.startsWith('−')){
-        currentNumber = currentNumber.slice(1); // Zeichen entfernen
-        expr = expr.slice(0, expr.length - currentNumber.length - 1) + currentNumber;
-      } else {
-        currentNumber = '−' + currentNumber; // Zeichen hinzufügen
-        // Wir verwenden '-' im Ausdruck und ersetzen es nur für die Anzeige
-        expr = expr.slice(0, expr.length - currentNumber.length + 1) + '-' + currentNumber.slice(1);
-      }
-      updateDisplay();
-    }
+      // Nur das Vorzeichen der aktuellen Zahl ändern
+      if(currentNumber.startsWith('−')){
+        currentNumber = currentNumber.slice(1); // Zeichen entfernen
+        expr = expr.slice(0, expr.length - currentNumber.length - 1) + currentNumber;
+      } else {
+        currentNumber = '−' + currentNumber; // Zeichen hinzufügen
+        // Wir verwenden '-' im Ausdruck und ersetzen es nur für die Anzeige
+        expr = expr.slice(0, expr.length - currentNumber.length + 1) + '-' + currentNumber.slice(1);
+      }
+      updateDisplay();
+    }
 
-    function clearAll(){
-      expr = ''; 
-      currentNumber = '0'; 
-      isResult = false;
-      updateDisplay();
-    }
+    function clearAll(){
+      expr = ''; 
+      currentNumber = '0'; 
+      isResult = false;
+      updateDisplay();
+    }
 
-    // --- Neue/Überarbeitete Berechnungslogik für Punkt-vor-Strich & Klammern ---
+    // --- Neue/Überarbeitete Berechnungslogik für Punkt-vor-Strich & Klammern ---
 
-    function equals(){
-      let fullExpr = expr;
-      if (fullExpr === '') return;
+    // ⭐ ANGEPASST: Speichert das Ergebnis in 'expr' für die Weiterverwendung
+    function equals(){
+      let fullExpr = expr;
+      if (fullExpr === '') return;
 
-      // 1. Fehlende Klammern ergänzen
-      const opens = (fullExpr.match(/\(/g)||[]).length;
-      const closes = (fullExpr.match(/\)/g)||[]).length;
-      if(opens > closes) fullExpr += ')'.repeat(opens - closes);
-      
-      // 2. Letzten Operator oder Klammer entfernen, falls vorhanden
-      while(isOp(fullExpr.slice(-1)) || fullExpr.slice(-1) === '('){
-        fullExpr = fullExpr.slice(0, -1);
-      }
+      // 1. Fehlende Klammern ergänzen
+      const opens = (fullExpr.match(/\(/g)||[]).length;
+      const closes = (fullExpr.match(/\)/g)||[]).length;
+      if(opens > closes) fullExpr += ')'.repeat(opens - closes);
+      
+      // 2. Letzten Operator oder Klammer entfernen, falls vorhanden
+      while(isOp(fullExpr.slice(-1)) || fullExpr.slice(-1) === '('){
+        fullExpr = fullExpr.slice(0, -1);
+      }
 
-      try{
-        const result = compute(fullExpr.replace(/−/g, '-')); // Temporäre Ersetzung für compute
-        currentNumber = formatNumber(result);
-        expr = fullExpr + ' =';
-        isResult = true;
-        updateDisplay();
-      }catch(e){
-        currentNumber = 'Error'; 
-        expr = fullExpr + ' =';
-        isResult = true;
-        updateDisplay();
-        console.error("Calculation Error:", e);
-      }
-    }
+      try{
+        const result = compute(fullExpr.replace(/−/g, '-')); 
+        currentNumber = formatNumber(result);
+        
+        // NEU: Speichere das Ergebnis als neuen expr-Wert.
+        // String(result) liefert einen unformatierten, rechenbaren String (ohne Tausender-Trennzeichen).
+        // Wir ersetzen das JavaScript-Minuszeichen durch das Anzeigeminuzeichen ('−').
+        expr = String(result).replace(/-/g, '−'); 
+        
+        isResult = true;
+        updateDisplay();
+      }catch(e){
+        currentNumber = 'Error'; 
+        expr = fullExpr + ' =';
+        isResult = true;
+        updateDisplay();
+        console.error("Calculation Error:", e);
+      }
+    }
 
-    // UNVERÄNDERT: Formatiert das Ergebnis
-    function formatNumber(n){if(!isFinite(n)) return 'Error'; const abs=Math.abs(n); if(abs!==0&&(abs<1e-6||abs>=1e12)) return n.toExponential(8).replace(/\.0+e/,'e'); return n.toLocaleString(undefined,{maximumFractionDigits:12});}
-    
-    // Stark überarbeitete und korrigierte COMPUTE-Funktion (Shunting-Yard & RPN Auswertung)
-    function compute(s){
-      // Bereinige doppelte Operatoren, ersetze '×' durch '*' und '÷' durch '/'
-      s = s.replace(/([+\-*/%^])\1+/g, '$1'); 
+    // UNVERÄNDERT: Formatiert das Ergebnis
+    function formatNumber(n){if(!isFinite(n)) return 'Error'; const abs=Math.abs(n); if(abs!==0&&(abs<1e-6||abs>=1e12)) return n.toExponential(8).replace(/\.0+e/,'e'); return n.toLocaleString(undefined,{maximumFractionDigits:12});}
+    
+    // Stark überarbeitete und korrigierte COMPUTE-Funktion (Shunting-Yard & RPN Auswertung)
+    function compute(s){
+      // Bereinige doppelte Operatoren
+      s = s.replace(/([+\-*/%^])\1+/g, '$1'); 
 
-      // Tokenisierung: Zahlen (mit Dezimalpunkt), Klammern und Operatoren
-      // Korrigiert für führende/unäre Minuszahlen: z.B. (1*-3)
-      const tokens = [];
-      const re = /\d*\.?\d+|[()+\-*/%^]/g;
-      let m; 
-      while((m=re.exec(s))){tokens.push(m[0]);} 
+      // Tokenisierung: Zahlen (mit Dezimalpunkt), Klammern und Operatoren
+      const tokens = [];
+      const re = /\d*\.?\d+|[()+\-*/%^]/g;
+      let m; 
+      while((m=re.exec(s))){tokens.push(m[0]);} 
 
-      // Unäres Minus korrigieren (z.B. 5*-3 oder -5)
-      for(let i=0;i<tokens.length;i++){
-        if(tokens[i]==='-'){
-          // Unär, wenn am Anfang steht oder auf Operator/Klammer folgt
-          if(i===0 || (isOp(tokens[i-1]) || tokens[i-1]==='(')){
-            tokens[i]='u-'; 
-          }
-        }
-      } 
-      
-      // Priorität und Assoziativität (Punkt-vor-Strich-Regel)
-      const prec={'u-':4,'^':3,'*':2,'/':2,'%':2,'+':1,'-':1}; 
-      const rightAssoc={'^':true,'u-':true}; 
-      
-      // Shunting-Yard-Algorithmus (Infix zu Postfix)
-      const out=[],stack=[]; 
-      for(const t of tokens){
-        if(/\d/.test(t[0]) || t.startsWith('.')){ 
-          out.push(Number(t)); // Zahl
-        } else if(t in prec){ // Operator
-          while(stack.length){
-            const top=stack[stack.length-1]; 
-            if(top in prec){
-              // Rechtsassoziativ: Gleiche Priorität -> push. Niedrigere Priorität -> pop.
-              // Linksassoziativ: Gleiche oder niedrigere Priorität -> pop.
-              if((rightAssoc[t]&&prec[t]<prec[top])||(!rightAssoc[t]&&prec[t]<=prec[top])){
-                out.push(stack.pop());
-              } else break;
-            } else break;
-          } 
-          stack.push(t);
-        } else if(t==='('){ // Klammer auf
-          stack.push(t); 
-        } else if(t===')'){ // Klammer zu
-          while(stack.length&&stack[stack.length-1]!=='(') out.push(stack.pop()); 
-          if(stack.pop()!=='(') throw new Error("Mismatched parentheses");
-        } 
-      } 
-      while(stack.length){
-        const x=stack.pop(); 
-        if(x==='('||x===')') throw new Error("Mismatched parentheses"); 
-        out.push(x);
-      } 
-      
-      // Postfix (RPN) Auswertung
-      const st=[]; 
-      for(const t of out){
-        if(typeof t==='number') st.push(t); 
-        else if(t==='u-') st.push(-st.pop()); 
-        else {
-          // Sicherstellen, dass zwei Operanden vorhanden sind
-          if(st.length < 2) throw new Error("Insufficient operands");
-          const b=st.pop(); 
-          const a=st.pop(); 
-          let r; 
-          switch(t){
-            case '+':r=a+b;break;
-            case '-':r=a-b;break;
-            case '*':r=a*b;break;
-            case '/':r=b===0?Infinity:a/b;break;
-            case '%':r=a%b;break;
-            case '^':r=Math.pow(a,b);break;
-            default:throw new Error("Unknown operator");
-          } 
-          st.push(r);
-        } 
-      } 
-      if(st.length!==1) throw new Error("Invalid expression structure"); 
-      return st[0];
-    }
+      // Unäres Minus korrigieren (z.B. 5*-3 oder -5)
+      for(let i=0;i<tokens.length;i++){
+        if(tokens[i]==='-'){
+          // Unär, wenn am Anfang steht oder auf Operator/Klammer folgt
+          if(i===0 || (isOp(tokens[i-1]) || tokens[i-1]==='(')){
+            tokens[i]='u-'; 
+          }
+        }
+      } 
+      
+      // Priorität und Assoziativität (Punkt-vor-Strich-Regel)
+      const prec={'u-':4,'^':3,'*':2,'/':2,'%':2,'+':1,'-':1}; 
+      const rightAssoc={'^':true,'u-':true}; 
+      
+      // Shunting-Yard-Algorithmus (Infix zu Postfix)
+      const out=[],stack=[]; 
+      for(const t of tokens){
+        if(/\d/.test(t[0]) || t.startsWith('.')){ 
+          out.push(Number(t)); // Zahl
+        } else if(t in prec){ // Operator
+          while(stack.length){
+            const top=stack[stack.length-1]; 
+            if(top in prec){
+              // Rechtsassoziativ: Gleiche Priorität -> push. Niedrigere Priorität -> pop.
+              // Linksassoziativ: Gleiche oder niedrigere Priorität -> pop.
+              if((rightAssoc[t]&&prec[t]<prec[top])||(!rightAssoc[t]&&prec[t]<=prec[top])){
+                out.push(stack.pop());
+              } else break;
+            } else break;
+          } 
+          stack.push(t);
+        } else if(t==='('){ // Klammer auf
+          stack.push(t); 
+        } else if(t===')'){ // Klammer zu
+          while(stack.length&&stack[stack.length-1]!=='(') out.push(stack.pop()); 
+          if(stack.pop()!=='(') throw new Error("Mismatched parentheses");
+        } 
+      } 
+      while(stack.length){
+        const x=stack.pop(); 
+        if(x==='('||x===')') throw new Error("Mismatched parentheses"); 
+        out.push(x);
+      } 
+      
+      // Postfix (RPN) Auswertung
+      const st=[]; 
+      for(const t of out){
+        if(typeof t==='number') st.push(t); 
+        else if(t==='u-') st.push(-st.pop()); 
+        else {
+          // Sicherstellen, dass zwei Operanden vorhanden sind
+          if(st.length < 2) throw new Error("Insufficient operands");
+          const b=st.pop(); 
+          const a=st.pop(); 
+          let r; 
+          switch(t){
+            case '+':r=a+b;break;
+            case '-':r=a-b;break;
+            case '*':r=a*b;break;
+            case '/':r=b===0?Infinity:a/b;break;
+            case '%':r=a%b;break;
+            case '^':r=Math.pow(a,b);break;
+            default:throw new Error("Unknown operator");
+          } 
+          st.push(r);
+        } 
+      } 
+      if(st.length!==1) throw new Error("Invalid expression structure"); 
+      return st[0];
+    }
 
-    // --- Event Listener (unverändert, nutzt die neuen Funktionen) ---
+    // --- Event Listener (unverändert, nutzt die neuen Funktionen) ---
 
-    document.querySelectorAll('button[data-num]').forEach(b=>b.addEventListener('click',()=>pushNum(b.dataset.num),{passive:true}));
-    document.querySelectorAll('button[data-op]').forEach(b=>b.addEventListener('click',()=>pushOp(b.dataset.op),{passive:true}));
-    document.querySelector('button[data-dot]')?.addEventListener('click',pushDot,{passive:true});
-    document.querySelector('button[data-equals]')?.addEventListener('click',equals,{passive:true});
-    document.querySelector('button[data-sign]')?.addEventListener('click',toggleSign,{passive:true});
-    document.querySelector('button[title="Clear (Esc)"]')?.addEventListener('click',clearAll,{passive:true});
-    document.querySelector('button[title="Backspace"]')?.addEventListener('click',backspace,{passive:true});
-    document.querySelectorAll('button[data-paren]').forEach(b=>b.addEventListener('click',()=>pushParen(b.dataset.paren),{passive:true}));
-    document.getElementById('copy').addEventListener('click',()=>{const txt=valueEl.textContent||''; navigator.clipboard?.writeText(txt).then(()=>{flash('Copied');}).catch(()=>{flash('Copy failed');})});
-    function flash(msg){statusEl.textContent=msg; setTimeout(()=>statusEl.textContent='Offline-ready',1200);}
-    
-    // Tastatur-Handler angepasst
-    window.addEventListener('keydown',(e)=>{
-      const k=e.key;
-      if(/^[0-9]$/.test(k)){pushNum(k);e.preventDefault();return;} 
-      if(k==='.') {pushDot();e.preventDefault();return;} 
-      if(['+','-','*','/','%','^'].includes(k)){pushOp(k);e.preventDefault();return;} 
-      if(k==='('||k===')'){pushParen(k);e.preventDefault();return;} 
-      if(k==='Enter'||k==='='){e.preventDefault();equals();return;} 
-      if(k==='Backspace'){backspace();e.preventDefault();return;} 
-      if(k==='Escape'){clearAll();e.preventDefault();return;} 
-    });
-    updateDisplay();
+    document.querySelectorAll('button[data-num]').forEach(b=>b.addEventListener('click',()=>pushNum(b.dataset.num),{passive:true}));
+    document.querySelectorAll('button[data-op]').forEach(b=>b.addEventListener('click',()=>pushOp(b.dataset.op),{passive:true}));
+    document.querySelector('button[data-dot]')?.addEventListener('click',pushDot,{passive:true});
+    document.querySelector('button[data-equals]')?.addEventListener('click',equals,{passive:true});
+    document.querySelector('button[data-sign]')?.addEventListener('click',toggleSign,{passive:true});
+    document.querySelector('button[title="Clear (Esc)"]')?.addEventListener('click',clearAll,{passive:true});
+    document.querySelector('button[title="Backspace"]')?.addEventListener('click',backspace,{passive:true});
+    document.querySelectorAll('button[data-paren]').forEach(b=>b.addEventListener('click',()=>pushParen(b.dataset.paren),{passive:true}));
+    document.getElementById('copy').addEventListener('click',()=>{const txt=valueEl.textContent||''; navigator.clipboard?.writeText(txt).then(()=>{flash('Copied');}).catch(()=>{flash('Copy failed');})});
+    function flash(msg){statusEl.textContent=msg; setTimeout(()=>statusEl.textContent='Offline-ready',1200);}
+    
+    // Tastatur-Handler angepasst
+    window.addEventListener('keydown',(e)=>{
+      const k=e.key;
+      if(/^[0-9]$/.test(k)){pushNum(k);e.preventDefault();return;} 
+      if(k==='.') {pushDot();e.preventDefault();return;} 
+      if(['+','-','*','/','%','^'].includes(k)){pushOp(k);e.preventDefault();return;} 
+      if(k==='('||k===')'){pushParen(k);e.preventDefault();return;} 
+      if(k==='Enter'||k==='='){e.preventDefault();equals();return;} 
+      if(k==='Backspace'){backspace();e.preventDefault();return;} 
+      if(k==='Escape'){clearAll();e.preventDefault();return;} 
+    });
+    updateDisplay();
 
-    // --- Service Worker for offline GitHub Pages ---
-    if('serviceWorker' in navigator){
-      navigator.serviceWorker.register('sw.js').then(()=>console.log('SW registered')).catch(console.error);
-    }
-  </script>
+    // --- Service Worker for offline GitHub Pages ---
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.register('sw.js').then(()=>console.log('SW registered')).catch(console.error);
+    }
+  </script>
 </body>
 </html>
