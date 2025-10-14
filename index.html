@@ -97,24 +97,30 @@
     const isOp = c => ['+','-','*','/','%','^'].includes(c);
     
     function updateDisplay(){
+      // Zeige den vollständigen Ausdruck oben an
       exprEl.textContent = expr.replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−');
+      // Zeige die aktuelle Zahl/das Ergebnis unten an
       valueEl.textContent = currentNumber;
     }
 
     // --- Logik zur Handhabung von Zahlen und Operatoren ---
 
+    // ⭐ ANGEPASST: Setzt isResult zurück und beginnt NEUE Rechnung
     function pushNum(n){
-      if(isResult){ expr = ''; isResult = false; }
+      if(isResult){ 
+          expr = ''; // Setzt den alten Ausdruck zurück
+          isResult = false; 
+      }
 
       // Wenn die letzte Eingabe ein Operator oder eine öffnende Klammer war, starten wir eine neue Zahl
       const lastChar = expr.slice(-1);
-      if(isOp(lastChar) || lastChar === '('){
+      if(isOp(lastChar) || lastChar === '(' || expr === ''){
         expr += String(n);
         currentNumber = String(n);
       } 
       // Wenn wir gerade eine Zahl bearbeiten
       else {
-        // Entferne die alte Zahl aus dem Ausdruck (z.B. wenn von "0" zu "1" gewechselt wird)
+        // Logik für die Bearbeitung der aktuellen Zahl
         if(currentNumber === '0'){
           expr = expr.slice(0, expr.length - currentNumber.length);
         } else {
@@ -150,15 +156,17 @@
       updateDisplay();
     }
 
-    // ⭐ ANGEPASST: Übernimmt das Ergebnis, wenn ein Operator nach "=" gedrückt wird
+    // ⭐ ANGEPASST: Verwendet das Ergebnis als neuen Startwert für die Formel
     function pushOp(op){
-      if(isResult) {
-          // NEU: Den aktuellen Anzeigewert (das Ergebnis) übernehmen
-          // Wir verwenden currentNumber, weil es die formatierte Zahl (ohne Tausender-Trennzeichen) von equals() enthält.
-          // Wir müssen das Minuszeichen für die interne expr-Verarbeitung wieder von '−' auf '-' ändern.
-          expr = expr + op; // expr enthält nun den berechneten Wert
+      if(isResult){
+          // Wenn isResult=true, verwenden wir das ERGEBNIS als neuen Startwert
+          // Wir holen den rechenbaren Wert, den wir in equals() in currentNumber gespeichert haben.
+          // Wir entfernen das Tausender-Trennzeichen und ersetzen das Anzeigeminuzeichen
+          const numericValue = currentNumber.replace(/,/g, '').replace(/−/g, '-'); 
+          
+          expr = numericValue + op; 
           isResult = false;
-          currentNumber = '0'; 
+          currentNumber = '0'; // currentNumber wird beim nächsten Num-Druck überschrieben
           updateDisplay();
           return;
       }
@@ -244,7 +252,7 @@
 
     // --- Neue/Überarbeitete Berechnungslogik für Punkt-vor-Strich & Klammern ---
 
-    // ⭐ ANGEPASST: Speichert das Ergebnis in 'expr' für die Weiterverwendung
+    // ⭐ ANGEPASST: Fügt '= Ergebnis' zum Ausdruck hinzu
     function equals(){
       let fullExpr = expr;
       if (fullExpr === '') return;
@@ -258,21 +266,25 @@
       while(isOp(fullExpr.slice(-1)) || fullExpr.slice(-1) === '('){
         fullExpr = fullExpr.slice(0, -1);
       }
+      
+      // Speichern des Expressions vor dem Hinzufügen des '='
+      const finalExprForCalc = fullExpr;
 
       try{
-        const result = compute(fullExpr.replace(/−/g, '-')); 
+        // Ergebnis berechnen
+        const result = compute(finalExprForCalc.replace(/−/g, '-')); 
+        
+        // Ergebnis formatieren und in der Hauptanzeige speichern
         currentNumber = formatNumber(result);
         
-        // NEU: Speichere das Ergebnis als neuen expr-Wert.
-        // String(result) liefert einen unformatierten, rechenbaren String (ohne Tausender-Trennzeichen).
-        // Wir ersetzen das JavaScript-Minuszeichen durch das Anzeigeminuzeichen ('−').
-        expr = String(result).replace(/-/g, '−'); 
+        // Den gesamten Ausdruck inklusive Ergebnis in der oberen Anzeige behalten
+        expr = finalExprForCalc.replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−') + ' = ' + currentNumber;
         
         isResult = true;
         updateDisplay();
       }catch(e){
         currentNumber = 'Error'; 
-        expr = fullExpr + ' =';
+        expr = finalExprForCalc.replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−') + ' =';
         isResult = true;
         updateDisplay();
         console.error("Calculation Error:", e);
