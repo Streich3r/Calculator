@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -7,20 +6,15 @@
   <title>Calculator</title>
   <meta name="description" content="A simple, offline-ready calculator that works also as a PWA." />
 
- <!-- Manifest für PWA -->
   <link rel="manifest" href="manifest.webmanifest">
 
-  <!-- Favicons für Browser -->
- <link rel="icon" type="image/png" href="icon-512.png">
+  <link rel="icon" type="image/png" href="icon-512.png">
 
-  <!-- Apple Touch Icon (iOS Homescreen) -->
   <link rel="apple-touch-icon" href="icon-512.png">
 
-  <!-- Theme-Farben für Browser-UI -->
   <meta name="theme-color" content="#0b0d12">
   <meta name="background-color" content="#0b0d12">
 
-  <!-- Optional: Windows Tile Icons -->
   <meta name="msapplication-TileImage" content="icon-512.png">
   <meta name="msapplication-TileColor" content="#0b0d12">
   
@@ -29,19 +23,26 @@
     :root{--bg:#0b0d12;--panel:#121622;--btn:#1b2232;--btn-alt:#24304a;--text:#e9edf5;--muted:#95a3bf;--accent:#6aa1ff;--danger:#ff6b6b;--radius:18px;--shadow:0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05);}
     @media (prefers-color-scheme: light){:root{--bg:#f5f7fb;--panel:#ffffff;--btn:#f1f4fb;--btn-alt:#e7ecf8;--text:#0b0d12;--muted:#5a6782;--accent:#2f6dff;--danger:#d14343;}}
     *{box-sizing:border-box} html,body{height:100%} body{margin:0;font:18px system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial;background:radial-gradient(1200px 800px at 80% -20%, rgba(106,161,255,.15), transparent 60%),var(--bg);color:var(--text);display:grid;place-items:center;-webkit-tap-highlight-color: transparent;}
-    .app{width:min(460px,95vw);padding:18px;border-radius:var(--radius);background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01)),var(--panel);box-shadow:var(--shadow);}
+    .app{width:min(460px,95vw);padding:18px;border-radius:var(--radius);background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01)),var(--panel);box-shadow:var(--shadow); transition: width 0.3s ease;} /* Transition für die Breite */
+    .app.advanced{width:min(700px,95vw);} /* Breiterer Modus */
     .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px} h1{font-size:20px;margin:0;letter-spacing:.3px;font-weight:700} .credits{font-size:12px;color:var(--muted)}
     .display{position:relative;border-radius:14px;background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.06));padding:20px;min-height:100px;box-shadow:inset 0 2px 12px rgba(0,0,0,.25)}
     .expr{font-size:15px;color:var(--muted);min-height:20px;word-wrap:break-word} .value{font-size:38px;line-height:1.3;font-variant-numeric:tabular-nums;word-wrap:break-word}
-    .keys{margin-top:14px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px} button{appearance:none;border:none;border-radius:16px;background:var(--btn);color:var(--text);padding:22px;font-size:22px;cursor:pointer;box-shadow:var(--shadow);transition: transform .06s ease, filter .2s ease;touch-action: manipulation;} button:active{transform:scale(0.96)} button:focus-visible{outline:2px solid var(--accent);outline-offset:2px} button[data-variant="op"]{background:var(--btn-alt)} button[data-variant="accent"]{background:linear-gradient(180deg, rgba(106,161,255,.22), rgba(106,161,255,.1));} button[data-variant="danger"]{background:linear-gradient(180deg, rgba(255,107,107,.25), rgba(255,107,107,.12));} .span-2{grid-column:span 2} .sr-only{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+    .keys-container{display:flex; gap:12px; margin-top:14px;} /* Container für beide Tastenfelder */
+    .keys{display:grid;grid-template-columns:repeat(4,1fr);gap:12px; flex-grow: 1;}
+    .keys.advanced-keys{grid-template-columns:repeat(3,1fr); display:none;} /* Advanced Tastenfeld */
+    .app.advanced .keys.advanced-keys{display:grid;}
+    button{appearance:none;border:none;border-radius:16px;background:var(--btn);color:var(--text);padding:22px;font-size:22px;cursor:pointer;box-shadow:var(--shadow);transition: transform .06s ease, filter .2s ease;touch-action: manipulation;} button:active{transform:scale(0.96)} button:focus-visible{outline:2px solid var(--accent);outline-offset:2px} button[data-variant="op"]{background:var(--btn-alt)} button[data-variant="accent"]{background:linear-gradient(180deg, rgba(106,161,255,.22), rgba(106,161,255,.1));} button[data-variant="danger"]{background:linear-gradient(180deg, rgba(255,107,107,.25), rgba(255,107,107,.12));} .span-2{grid-column:span 2} .sr-only{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
     .footer{margin-top:14px;display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:12px;flex-wrap:wrap} .switcher{display:flex;gap:8px} .switch{background:transparent;box-shadow:none;border:1px solid rgba(255,255,255,.08);padding:8px 10px;font-size:12px}
+    /* Neue Klasse für die Advanced Tasten, die nicht in der Standardansicht sichtbar sind */
+    .advanced-key{font-size:18px; padding:18px;}
   </style>
 </head>
 <body>
   <main class="app" role="application" aria-label="Calculator">
     <div class="top">
       <h1>Calculator</h1>
-      <div class="credits" id="status">Offline-ready</div>
+      <div class="credits" id="status">Normal</div>
     </div>
 
     <section class="display" aria-live="polite">
@@ -49,36 +50,54 @@
       <div class="value" id="value">0</div>
     </section>
 
-    <section class="keys" aria-label="Calculator keypad">
-      <button data-key="Escape" data-variant="danger" title="Clear (Esc)">AC</button>
-      <button data-key="Backspace" title="Backspace">⌫</button>
-      <button data-op="%" data-variant="op" title="Percent">%</button>
-      <button data-op="/" data-variant="op" title="Divide">÷</button>
-      <button data-num="7">7</button>
-      <button data-num="8">8</button>
-      <button data-num="9">9</button>
-      <button data-op="*" data-variant="op" title="Multiply">×</button>
-      <button data-num="4">4</button>
-      <button data-num="5">5</button>
-      <button data-num="6">6</button>
-      <button data-op="-" data-variant="op" title="Minus">−</button>
-      <button data-num="1">1</button>
-      <button data-num="2">2</button>
-      <button data-num="3">3</button>
-      <button data-op="+" data-variant="op" title="Plus">+</button>
-      <button data-num="0" class="span-2">0</button>
-      <button data-dot=".">.</button>
-      <button data-equals="=" data-variant="accent" title="Equals (=)">=</button>
-      <button data-paren="(" title="Left parenthesis">(</button>
-      <button data-paren=")" title="Right parenthesis">)</button>
-      <button data-op="^" data-variant="op" title="Power">^</button>
-      <button data-sign="±" title="Toggle sign">±</button>
-    </section>
+    <div class="keys-container">
+      <section class="keys advanced-keys" aria-label="Advanced functions keypad">
+        <button data-fn="sin" data-variant="op" class="advanced-key" title="Sine">sin</button>
+        <button data-fn="cos" data-variant="op" class="advanced-key" title="Cosine">cos</button>
+        <button data-fn="tan" data-variant="op" class="advanced-key" title="Tangent">tan</button>
+        <button data-fn="sqrt" data-variant="op" class="advanced-key" title="Square Root">√</button>
+        <button data-fn="pow2" data-variant="op" class="advanced-key" title="Square">x²</button>
+        <button data-op="yroot" data-variant="op" class="advanced-key" title="y-th root">ⁿ√x</button>
+        <button data-fn="log10" data-variant="op" class="advanced-key" title="Logarithm (Base 10)">log</button>
+        <button data-fn="ln" data-variant="op" class="advanced-key" title="Natural Logarithm (Base e)">ln</button>
+        <button data-op="logx" data-variant="op" class="advanced-key" title="Logarithm (Base x)">logᵪ</button>
+        <button data-const="PI" data-variant="op" class="advanced-key" title="Pi (π)">π</button>
+        <button data-const="E" data-variant="op" class="advanced-key" title="Euler's Number (e)">e</button>
+        <button data-fn="fact" data-variant="op" class="advanced-key" title="Factorial">n!</button>
+      </section>
+
+      <section class="keys" aria-label="Standard calculator keypad">
+        <button data-key="Escape" data-variant="danger" title="Clear (Esc)">AC</button>
+        <button data-key="Backspace" title="Backspace">⌫</button>
+        <button data-op="%" data-variant="op" title="Percent">%</button>
+        <button data-op="/" data-variant="op" title="Divide">÷</button>
+        <button data-num="7">7</button>
+        <button data-num="8">8</button>
+        <button data-num="9">9</button>
+        <button data-op="*" data-variant="op" title="Multiply">×</button>
+        <button data-num="4">4</button>
+        <button data-num="5">5</button>
+        <button data-num="6">6</button>
+        <button data-op="-" data-variant="op" title="Minus">−</button>
+        <button data-num="1">1</button>
+        <button data-num="2">2</button>
+        <button data-num="3">3</button>
+        <button data-op="+" data-variant="op" title="Plus">+</button>
+        <button data-num="0" class="span-2">0</button>
+        <button data-dot=".">.</button>
+        <button data-equals="=" data-variant="accent" title="Equals (=)">=</button>
+        <button data-paren="(" title="Left parenthesis">(</button>
+        <button data-paren=")" title="Right parenthesis">)</button>
+        <button data-op="^" data-variant="op" title="Power">^</button>
+        <button data-sign="±" title="Toggle sign">±</button>
+      </section>
+    </div>
 
     <div class="footer">
       <span>Keys: 0–9 • . • + − × ÷ • ( ) • % ^ • Enter • Esc • Backspace</span>
       <div class="switcher">
         <button class="switch" id="copy">Copy</button>
+        <button class="switch" id="swap">Swap</button>
       </div>
     </div>
   </main>
