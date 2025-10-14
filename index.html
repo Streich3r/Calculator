@@ -104,53 +104,56 @@
 
 <script>
     // --- Calculator logic embedded ---
+    const appEl = document.querySelector('.app');
     const valueEl = document.getElementById('value');
     const exprEl = document.getElementById('expr');
     const statusEl = document.getElementById('status');
+    const advancedKeysEl = document.querySelector('.advanced-keys');
     
-    // Neue Struktur: expr speichert den gesamten Ausdruck
-    // currentNumber speichert die Zahl, die gerade eingegeben wird (als String)
+    // Zustand
     let expr = '', currentNumber = '0';
-    let isResult = false; // Flag, um zu wissen, ob das aktuelle 'expr' ein Ergebnis ist
-    
-    // NEU: Speichert den zuletzt berechneten numerischen Wert für die Weiterrechnung
+    let isResult = false; 
     let lastResult = null; 
-    
-    const isOp = c => ['+','-','*','/','%','^'].includes(c);
-    
+    let isAdvanced = false; // NEU: Modus-Zustand
+
+    const isOp = c => ['+','-','*','/','%','^','yroot','logx'].includes(c);
+    const isNumChar = c => /[\d.−]/.test(c);
+
     function updateDisplay(){
-      // Zeige den vollständigen Ausdruck oben an (Ersetze interne Operatoren durch Anzeigesymbole)
-      exprEl.textContent = expr.replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−');
-      // Zeige die aktuelle Zahl/das Ergebnis unten an
+      // Ersetze interne Operatoren durch Anzeigesymbole
+      let displayExpr = expr
+          .replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−')
+          .replace(/\^/g, '^').replace(/yroot/g, 'ⁿ√')
+          .replace(/logx/g, 'logᵪ');
+
+      // Ersetze Funktionsnamen durch ihre Display-Form
+      displayExpr = displayExpr.replace(/pow2\((.*?)\)/g, '$1²');
+
+      exprEl.textContent = displayExpr;
       valueEl.textContent = currentNumber;
+      statusEl.textContent = isAdvanced ? 'Advanced' : 'Normal';
     }
 
-    // --- Logik zur Handhabung von Zahlen und Operatoren ---
+    // --- Core Logic (Unverändert/Korrigiert) ---
 
     function pushNum(n){
       if(isResult){ 
-          // Wenn eine Zahl nach dem Ergebnis gedrückt wird, starte einen neuen Ausdruck
-          expr = ''; // Starte eine neue Formel
+          expr = ''; 
           isResult = false;
-          lastResult = null; // Setze den letzten Ergebniswert zurück
+          lastResult = null; 
       }
 
-      // Wenn die letzte Eingabe ein Operator oder eine öffnende Klammer war, starten wir eine neue Zahl
       const lastChar = expr.slice(-1);
       if(isOp(lastChar) || lastChar === '(' || expr === ''){
         expr += String(n);
         currentNumber = String(n);
-      } 
-      // Wenn wir gerade eine Zahl bearbeiten
-      else {
-        // Logik für die Bearbeitung der aktuellen Zahl
+      } else {
         if(currentNumber === '0'){
           expr = expr.slice(0, expr.length - currentNumber.length);
         } else {
           expr = expr.slice(0, expr.length - currentNumber.length);
         }
         
-        // Aktualisiere die aktuelle Zahl und hänge sie an den Ausdruck an
         if(currentNumber === '0') currentNumber = String(n);
         else currentNumber += String(n);
         
@@ -164,14 +167,10 @@
 
       const lastChar = expr.slice(-1);
 
-      // Starte mit 0. wenn der Ausdruck leer ist oder ein Operator/Klammer davor steht
       if(expr === '' || isOp(lastChar) || lastChar === '('){
         expr += '0.';
         currentNumber = '0.';
-      } 
-      // Wenn wir gerade eine Zahl bearbeiten und noch keinen Punkt haben
-      else if(!currentNumber.includes('.')){
-        // Entferne die alte Zahl aus dem Ausdruck
+      } else if(!currentNumber.includes('.')){
         expr = expr.slice(0, expr.length - currentNumber.length);
         currentNumber += '.';
         expr += currentNumber;
@@ -179,36 +178,27 @@
       updateDisplay();
     }
 
-    // ⭐ KORREKTUR: Die Logik, um nach einem Ergebnis weiterzurechnen, wurde angepasst.
     function pushOp(op){
       if(isResult){
-          // Wenn isResult=true, muss der Ausdruck auf das Ergebnis zurückgesetzt werden,
-          // bevor der neue Operator angehängt wird (z.B. von "5+5=10" zu "10+")
           if (lastResult !== null) {
-              // Verwende currentNumber (den formatierten Ergebnis-String) als Basis
               expr = currentNumber; 
           } else {
-              // Falls lastResult aus irgendeinem Grund null ist, starte mit '0'
               expr = '0';
           }
           
           expr += op;  
           isResult = false;
-          // lastResult bleibt für die '=' Wiederholung.
-          currentNumber = '0'; // Setze currentNumber zurück, um die nächste Zahl einzugeben
+          currentNumber = '0'; 
           updateDisplay();
           return;
       }
       
-      // Bestehende Logik, wenn isResult false ist
-      // Ersetze letzten Operator, wenn bereits einer vorhanden ist
       if(isOp(expr.slice(-1))){
         expr = expr.slice(0,-1) + op;
       } 
-      // Füge den Operator hinzu und setze die aktuelle Zahl zurück (für die nächste Eingabe)
       else if(expr !== ''){
         expr += op;
-        currentNumber = '0'; // Setze zurück, damit die nächste Zahl den Ausdruck beginnt
+        currentNumber = '0'; 
       }
       updateDisplay();
     }
@@ -219,15 +209,12 @@
       const lastChar = expr.slice(-1);
       
       if(p === '('){
-        // Füge * ein, wenn eine Zahl oder schließende Klammer davor steht (implizite Multiplikation)
         if(/[\d.)]/.test(lastChar) && expr !== '0') expr += '*';
         expr += '(';
       } else if (p === ')'){
-        // Schließende Klammern nur hinzufügen, wenn die Klammernbalance es erlaubt
         const opens = (expr.match(/\(/g) || []).length;
         const closes = (expr.match(/\)/g) || []).length;
         
-        // Nur schließen, wenn geöffnet wurde und der letzte Eintrag keine Operation ist
         if(opens > closes && !isOp(lastChar) && lastChar !== '('){
           expr += ')';
         }
@@ -245,9 +232,8 @@
       
       expr = expr.slice(0, -1);
       
-      // Versuche, die neue aktuelle Zahl zu bestimmen, wenn eine Zahl gelöscht wurde
       if(!isOp(expr.slice(-1)) && expr.slice(-1) !== '(' && expr.slice(-1) !== ')'){
-        const match = expr.match(/(-?\d+\.?\d*|\.\d+)$/); // Unterstütze negatives Vorzeichen beim Parsen
+        const match = expr.match(/(-?\d+\.?\d*|\.\d+)$/); 
         currentNumber = match ? match[0].replace('-', '−') : '0';
       } else {
         currentNumber = '0';
@@ -258,11 +244,9 @@
     }
     
     function toggleSign(){
-      // Nur das Vorzeichen der aktuellen Zahl ändern
-      // Wenn das Ergebnis angezeigt wird, ändere das Vorzeichen des Ergebnisses
       if(isResult){
-          // Wenn bereits ein Ergebnis, muss es wieder in den Ausdruck
-          const numericValue = compute(currentNumber.replace(/−/g, '-'));
+          // Toggle des Ergebnisses
+          const numericValue = lastResult || compute(currentNumber.replace(/−/g, '-'));
           const newValue = -numericValue;
           
           expr = formatNumber(numericValue) + '=' + formatNumber(newValue);
@@ -274,19 +258,21 @@
       
       if(currentNumber === '0') return;
 
-      // Vorzeichen in der aktuellen Zahl umschalten
+      // Toggle der aktuellen Zahl im Ausdruck
+      const exprBase = expr.slice(0, expr.length - currentNumber.length);
+      const absValue = currentNumber.replace(/−/g, '');
+
       if(currentNumber.startsWith('−')){
-        // Zahl aus dem Ausdruck entfernen: '... -5' -> '...'
-        expr = expr.slice(0, expr.length - currentNumber.length);
-        currentNumber = currentNumber.slice(1); // Vorzeichen entfernen
-        // Zahl wieder anhängen: '...5'
-        expr += currentNumber;
+        currentNumber = absValue;
+        expr = exprBase.replace(/-$/, '') + currentNumber;
       } else {
-        // Zahl aus dem Ausdruck entfernen: '... 5' -> '...'
-        expr = expr.slice(0, expr.length - currentNumber.length);
-        currentNumber = '−' + currentNumber; // Vorzeichen hinzufügen
-        // Zahl mit Minus im Ausdruck anhängen: '... -5'
-        expr += '-' + currentNumber.slice(1);
+        currentNumber = '−' + absValue;
+        // Füge '-' nur hinzu, wenn kein Operator davor steht, sonst ist es unäres Minus
+        if(!isOp(exprBase.slice(-1)) && exprBase.slice(-1) !== '(' && exprBase !== '') {
+             expr = exprBase + '-' + absValue;
+        } else {
+             expr = exprBase + '-' + absValue;
+        }
       }
       updateDisplay();
     }
@@ -295,37 +281,73 @@
       expr = ''; 
       currentNumber = '0'; 
       isResult = false;
-      lastResult = null; // Setze den letzten Ergebniswert zurück
+      lastResult = null; 
       updateDisplay();
     }
 
-    // --- Neue/Überarbeitete Berechnungslogik für Punkt-vor-Strich & Klammern ---
+    // --- NEUE ADVANCED LOGIK ---
 
-    // ⭐ ANGEPASST: Führt die sequentielle Berechnung durch
+    function pushFunction(fn){
+        if(isResult){ expr = ''; isResult = false; }
+
+        const lastChar = expr.slice(-1);
+
+        // Implizite Multiplikation: Wenn Zahl oder Klammer davor, füge '*' hinzu
+        if(isNumChar(lastChar) || lastChar === ')'){
+             expr += '*';
+        }
+
+        // Für Funktionen wie 'sin', 'log', 'sqrt'
+        expr += fn + '(';
+        currentNumber = '0';
+        updateDisplay();
+    }
+
+    function pushConstant(c){
+        if(isResult){ expr = ''; isResult = false; }
+        
+        const lastChar = expr.slice(-1);
+        const value = (c === 'PI') ? Math.PI.toFixed(12) : Math.E.toFixed(12);
+
+        // Implizite Multiplikation
+        if(isNumChar(lastChar) || lastChar === ')'){
+             expr += '*';
+        }
+
+        expr += value;
+        currentNumber = formatNumber(value);
+        updateDisplay();
+    }
+
+    // ⭐ NEU: Moduswechsel-Funktion
+    function toggleMode(){
+        isAdvanced = !isAdvanced;
+        appEl.classList.toggle('advanced', isAdvanced);
+        updateDisplay();
+        // Optional: clearAll() beim Moduswechsel, um Verwirrung zu vermeiden
+        clearAll();
+    }
+
+    // --- Berechnungslogik (erweitert für neue Funktionen) ---
+
     function equals(){
       let exprToCalc = expr;
       if (exprToCalc === '' || exprToCalc.endsWith('=')) return;
       
-      // 1. Fehlende Klammern ergänzen
       const opens = (exprToCalc.match(/\(/g)||[]).length;
       const closes = (exprToCalc.match(/\)/g)||[]).length;
       if(opens > closes) exprToCalc += ')'.repeat(opens - closes);
       
-      // 2. Letzten Operator oder Klammer entfernen, falls vorhanden
       while(isOp(exprToCalc.slice(-1)) || exprToCalc.slice(-1) === '('){
         exprToCalc = exprToCalc.slice(0, -1);
       }
 
-      // 3. Den Ausdruck vorbereiten (Alle '−' zu echten '-')
       let finalExprForCalc = exprToCalc.replace(/−/g, '-');
       
-      // Bereinige unnötige Zeichen (z.B. nach einem Fehler)
       const parts = finalExprForCalc.split('=');
       if (parts.length > 1) {
-          finalExprForCalc = parts.pop(); // Verwende nur den Teil nach dem letzten '='
+          finalExprForCalc = parts.pop(); 
           if (lastResult !== null) {
-               // Wenn ein vorheriges Ergebnis gespeichert ist, setze es als Startwert, 
-               // falls der neue Ausdruck mit einem Operator beginnt (z.B. '+5')
                const startChar = finalExprForCalc.charAt(0);
                if (isOp(startChar) || startChar === '(') {
                    finalExprForCalc = lastResult + finalExprForCalc;
@@ -334,64 +356,60 @@
       }
       
       try{
-        // Ergebnis berechnen
         const result = compute(finalExprForCalc); 
         
-        // Ergebnis formatieren und in der Hauptanzeige speichern
         currentNumber = formatNumber(result);
         
-        // Den gesamten Ausdruck um das Ergebnis erweitern
-        // Verwende den vollständigen Ausdruck, der zum Ergebnis führte (kann '10+5' sein, falls weitergerechnet wurde)
         expr = expr.replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−') + '=' + currentNumber;
         
         isResult = true;
-        lastResult = result; // Speichere den numerischen Wert für die nächste Rechnung
+        lastResult = result; 
         updateDisplay();
       }catch(e){
         currentNumber = 'Error'; 
         expr = expr.replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−') + '=';
         isResult = true;
-        lastResult = null; // Setze zurück, damit der nächste Klick alles löscht
+        lastResult = null;
         updateDisplay();
         console.error("Calculation Error:", e);
       }
     }
 
-    // UNVERÄNDERT: Formatiert das Ergebnis
     function formatNumber(n){if(!isFinite(n)) return 'Error'; const abs=Math.abs(n); if(abs!==0&&(abs<1e-6||abs>=1e12)) return n.toExponential(8).replace(/\.0+e/,'e'); return n.toLocaleString(undefined,{maximumFractionDigits:12});}
     
-    // Stark überarbeitete und korrigierte COMPUTE-Funktion (Shunting-Yard & RPN Auswertung)
+    // ⭐ ERWEITERT: compute-Funktion für mathematische Funktionen
     function compute(s){
-      // Bereinige doppelte Operatoren und das Gleichheitszeichen
       s = s.replace(/([+\-*/%^])\1+/g, '$1').replace(/=/g, ''); 
 
-      // Tokenisierung: Zahlen (mit Dezimalpunkt), Klammern und Operatoren
+      // Ersetze Spezialfunktionen in ihren Token-Form
+      s = s.replace(/sin\(/g, 'sin(').replace(/cos\(/g, 'cos(').replace(/tan\(/g, 'tan(');
+      s = s.replace(/sqrt\(/g, 'sqrt(').replace(/log10\(/g, 'log10(').replace(/ln\(/g, 'ln(');
+      s = s.replace(/pow2\(/g, 'pow2(').replace(/fact\(/g, 'fact(');
+      
+      // Tokenisierung (jetzt mit Funktionsnamen)
       const tokens = [];
-      const re = /(-?\d*\.?\d+)|[()+\-*/%^]/g; // Erlaube negatives Vorzeichen für Zahlen zu Beginn
+      const re = /(-?\d*\.?\d+)|[()+\-*/%^]|(sin|cos|tan|sqrt|log10|ln|pow2|fact|yroot|logx)/g; 
       let m; 
       while((m=re.exec(s))){tokens.push(m[0]);} 
 
-      // Unäres Minus korrigieren (z.B. 5*-3 oder -5)
+      // Unäres Minus korrigieren
       for(let i=0;i<tokens.length;i++){
         if(tokens[i]==='-'){
-          // Unär, wenn am Anfang steht oder auf Operator/Klammer folgt
-          if(i===0 || (isOp(tokens[i-1]) || tokens[i-1]==='(')){
+          if(i===0 || (isOp(tokens[i-1]) || tokens[i-1]==='(' || tokens[i-1].match(/sin|cos|tan|sqrt|log10|ln|pow2|fact/))){
             tokens[i]='u-'; 
           }
         }
       } 
       
-      // Priorität und Assoziativität (Punkt-vor-Strich-Regel)
-      const prec={'u-':4,'^':3,'*':2,'/':2,'%':2,'+':1,'-':1}; 
+      const prec={'u-':4,'^':3,'*':2,'/':2,'%':2,'yroot':3,'logx':3,'+':1,'-':1, 'sin':5,'cos':5,'tan':5,'sqrt':5,'log10':5,'ln':5,'pow2':5,'fact':5}; 
       const rightAssoc={'^':true,'u-':true}; 
       
-      // Shunting-Yard-Algorithmus (Infix zu Postfix)
+      // Shunting-Yard (Infix zu Postfix)
       const out=[],stack=[]; 
       for(const t of tokens){
-        // Prüfe, ob das Token eine Zahl ist
         if(!isNaN(parseFloat(t)) && isFinite(t)){ 
-          out.push(Number(t)); // Zahl
-        } else if(t in prec){ // Operator
+          out.push(Number(t)); 
+        } else if(t in prec){ 
           while(stack.length){
             const top=stack[stack.length-1]; 
             if(top in prec){
@@ -401,11 +419,16 @@
             } else break;
           } 
           stack.push(t);
-        } else if(t==='('){ // Klammer auf
+        } else if(t.match(/sin|cos|tan|sqrt|log10|ln|pow2|fact/)){ // Funktion
+            stack.push(t);
+        } else if(t==='('){ 
           stack.push(t); 
-        } else if(t===')'){ // Klammer zu
+        } else if(t===')'){ 
           while(stack.length&&stack[stack.length-1]!=='(') out.push(stack.pop()); 
           if(stack.pop()!=='(') throw new Error("Mismatched parentheses");
+          // Nach schließender Klammer, Pop die Funktion, falls vorhanden
+          const top = stack[stack.length-1];
+          if(top.match(/sin|cos|tan|sqrt|log10|ln|pow2|fact/)) out.push(stack.pop());
         } 
       } 
       while(stack.length){
@@ -419,8 +442,28 @@
       for(const t of out){
         if(typeof t==='number') st.push(t); 
         else if(t==='u-') st.push(-st.pop()); 
+        else if(t.match(/sin|cos|tan|sqrt|log10|ln|pow2|fact/)){
+            const a = st.pop();
+            let r;
+            switch(t){
+                case 'sin': r = Math.sin(a); break;
+                case 'cos': r = Math.cos(a); break;
+                case 'tan': r = Math.tan(a); break;
+                case 'sqrt': r = Math.sqrt(a); break;
+                case 'log10': r = Math.log10(a); break;
+                case 'ln': r = Math.log(a); break;
+                case 'pow2': r = Math.pow(a, 2); break;
+                case 'fact': 
+                    // Einfache Fakultät (nur für nicht-negative Ganzzahlen)
+                    if (a < 0 || a !== Math.floor(a)) throw new Error("Factorial error");
+                    r = 1;
+                    for(let i=2; i<=a; i++) r *= i;
+                    break;
+                default: throw new Error("Unknown function");
+            }
+            st.push(r);
+        }
         else {
-          // Sicherstellen, dass zwei Operanden vorhanden sind
           if(st.length < 2) throw new Error("Insufficient operands");
           const b=st.pop(); 
           const a=st.pop(); 
@@ -432,6 +475,8 @@
             case '/':r=b===0?Infinity:a/b;break;
             case '%':r=a%b;break;
             case '^':r=Math.pow(a,b);break;
+            case 'yroot':r=Math.pow(b, 1/a);break; // a ⁿ√ b (Basis a, Exponent 1/a)
+            case 'logx':r=Math.log(b) / Math.log(a);break; // logₐ(b)
             default:throw new Error("Unknown operator");
           } 
           st.push(r);
@@ -441,20 +486,28 @@
       return st[0];
     }
 
-    // --- Event Listener (unverändert, nutzt die neuen Funktionen) ---
+
+    // --- Event Listener ---
 
     document.querySelectorAll('button[data-num]').forEach(b=>b.addEventListener('click',()=>pushNum(b.dataset.num),{passive:true}));
     document.querySelectorAll('button[data-op]').forEach(b=>b.addEventListener('click',()=>pushOp(b.dataset.op),{passive:true}));
+    document.querySelectorAll('button[data-fn]').forEach(b=>b.addEventListener('click',()=>pushFunction(b.dataset.fn),{passive:true})); // NEU
+    document.querySelectorAll('button[data-const]').forEach(b=>b.addEventListener('click',()=>pushConstant(b.dataset.const),{passive:true})); // NEU
+
     document.querySelector('button[data-dot]')?.addEventListener('click',pushDot,{passive:true});
     document.querySelector('button[data-equals]')?.addEventListener('click',equals,{passive:true});
     document.querySelector('button[data-sign]')?.addEventListener('click',toggleSign,{passive:true});
     document.querySelector('button[title="Clear (Esc)"]')?.addEventListener('click',clearAll,{passive:true});
     document.querySelector('button[title="Backspace"]')?.addEventListener('click',backspace,{passive:true});
     document.querySelectorAll('button[data-paren]').forEach(b=>b.addEventListener('click',()=>pushParen(b.dataset.paren),{passive:true}));
-    document.getElementById('copy').addEventListener('click',()=>{const txt=valueEl.textContent||''; navigator.clipboard?.writeText(txt).then(()=>{flash('Copied');}).catch(()=>{flash('Copy failed');})});
-    function flash(msg){statusEl.textContent=msg; setTimeout(()=>statusEl.textContent='Offline-ready',1200);}
     
-    // Tastatur-Handler angepasst
+    document.getElementById('copy').addEventListener('click',()=>{const txt=valueEl.textContent||''; navigator.clipboard?.writeText(txt).then(()=>{flash('Copied');}).catch(()=>{flash('Copy failed');})});
+    
+    document.getElementById('swap').addEventListener('click', toggleMode, {passive:true}); // NEU: Swap Button
+
+    function flash(msg){statusEl.textContent=msg; setTimeout(()=>statusEl.textContent=isAdvanced ? 'Advanced' : 'Normal',1200);}
+    
+    // Tastatur-Handler erweitert für die neuen Funktionen (z.B. s für sin)
     window.addEventListener('keydown',(e)=>{
       const k=e.key;
       if(/^[0-9]$/.test(k)){pushNum(k);e.preventDefault();return;} 
@@ -463,13 +516,24 @@
       if(k==='('||k===')'){pushParen(k);e.preventDefault();return;} 
       if(k==='Enter'||k==='='){e.preventDefault();equals();return;} 
       if(k==='Backspace'){backspace();e.preventDefault();return;} 
-      if(k==='Escape'){clearAll();e.preventDefault();return;} 
+      if(k==='Escape'){clearAll();e.preventDefault();return;}
+      
+      // Advanced Key Shortcuts
+      if(isAdvanced) {
+          if(k.toLowerCase() === 's') { pushFunction('sin'); e.preventDefault(); return; }
+          if(k.toLowerCase() === 'c') { pushFunction('cos'); e.preventDefault(); return; }
+          if(k.toLowerCase() === 't') { pushFunction('tan'); e.preventDefault(); return; }
+          if(k.toLowerCase() === 'r') { pushFunction('sqrt'); e.preventDefault(); return; } // r for root
+          if(k.toLowerCase() === 'p') { pushConstant('PI'); e.preventDefault(); return; } // p for Pi
+      }
     });
+    
+    // Initialisierung des Displays auf 'Normal'
     updateDisplay();
 
     // --- Service Worker for offline GitHub Pages ---
     if('serviceWorker' in navigator){
-      navigator.serviceWorker.register('sw.js').then(()=>console.log('SW registered')).catch(console.error);
+      // navigator.serviceWorker.register('sw.js').then(()=>console.log('SW registered')).catch(console.error);
     }
   </script>
 </body>
