@@ -1,1031 +1,449 @@
 <!doctype html>
-
 <html lang="en">
-
 <head>
-
   <meta charset="utf-8" />
-
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-
   <title>Calculator</title>
-
   <meta name="description" content="A simple, offline-ready calculator that works also as a PWA." />
 
+   <link rel="manifest" href="manifest.webmanifest">
 
+   <link rel="icon" type="image/png" href="icon-512.png">
 
- <!-- Manifest für PWA -->
+    <link rel="apple-touch-icon" href="icon-512.png">
 
-  <link rel="manifest" href="manifest.webmanifest">
-
-
-
-  <!-- Favicons für Browser -->
-
- <link rel="icon" type="image/png" href="icon-512.png">
-
-
-
-  <!-- Apple Touch Icon (iOS Homescreen) -->
-
-  <link rel="apple-touch-icon" href="icon-512.png">
-
-
-
-  <!-- Theme-Farben für Browser-UI -->
-
-  <meta name="theme-color" content="#0b0d12">
-
+    <meta name="theme-color" content="#0b0d12">
   <meta name="background-color" content="#0b0d12">
 
-
-
-  <!-- Optional: Windows Tile Icons -->
-
-  <meta name="msapplication-TileImage" content="icon-512.png">
-
+    <meta name="msapplication-TileImage" content="icon-512.png">
   <meta name="msapplication-TileColor" content="#0b0d12">
-
   
-
   
-
   <style>
-
     :root{--bg:#0b0d12;--panel:#121622;--btn:#1b2232;--btn-alt:#24304a;--text:#e9edf5;--muted:#95a3bf;--accent:#6aa1ff;--danger:#ff6b6b;--radius:18px;--shadow:0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05);}
-
     @media (prefers-color-scheme: light){:root{--bg:#f5f7fb;--panel:#ffffff;--btn:#f1f4fb;--btn-alt:#e7ecf8;--text:#0b0d12;--muted:#5a6782;--accent:#2f6dff;--danger:#d14343;}}
-
     *{box-sizing:border-box} html,body{height:100%} body{margin:0;font:18px system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial;background:radial-gradient(1200px 800px at 80% -20%, rgba(106,161,255,.15), transparent 60%),var(--bg);color:var(--text);display:grid;place-items:center;-webkit-tap-highlight-color: transparent;}
-
     .app{width:min(460px,95vw);padding:18px;border-radius:var(--radius);background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01)),var(--panel);box-shadow:var(--shadow);}
-
     .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px} h1{font-size:20px;margin:0;letter-spacing:.3px;font-weight:700} .credits{font-size:12px;color:var(--muted)}
-
     .display{position:relative;border-radius:14px;background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.06));padding:20px;min-height:100px;box-shadow:inset 0 2px 12px rgba(0,0,0,.25)}
-
     .expr{font-size:15px;color:var(--muted);min-height:20px;word-wrap:break-word} .value{font-size:38px;line-height:1.3;font-variant-numeric:tabular-nums;word-wrap:break-word}
-
     .keys{margin-top:14px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px} button{appearance:none;border:none;border-radius:16px;background:var(--btn);color:var(--text);padding:22px;font-size:22px;cursor:pointer;box-shadow:var(--shadow);transition: transform .06s ease, filter .2s ease;touch-action: manipulation;} button:active{transform:scale(0.96)} button:focus-visible{outline:2px solid var(--accent);outline-offset:2px} button[data-variant="op"]{background:var(--btn-alt)} button[data-variant="accent"]{background:linear-gradient(180deg, rgba(106,161,255,.22), rgba(106,161,255,.1));} button[data-variant="danger"]{background:linear-gradient(180deg, rgba(255,107,107,.25), rgba(255,107,107,.12));} .span-2{grid-column:span 2} .sr-only{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
-
     .footer{margin-top:14px;display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:12px;flex-wrap:wrap} .switcher{display:flex;gap:8px} .switch{background:transparent;box-shadow:none;border:1px solid rgba(255,255,255,.08);padding:8px 10px;font-size:12px}
-
   </style>
-
 </head>
-
 <body>
-
   <main class="app" role="application" aria-label="Calculator">
-
     <div class="top">
-
       <h1>Calculator</h1>
-
       <div class="credits" id="status">Offline-ready</div>
-
     </div>
-
-
 
     <section class="display" aria-live="polite">
-
       <div class="expr" id="expr"></div>
-
       <div class="value" id="value">0</div>
-
     </section>
-
-
 
     <section class="keys" aria-label="Calculator keypad">
-
       <button data-key="Escape" data-variant="danger" title="Clear (Esc)">AC</button>
-
       <button data-key="Backspace" title="Backspace">⌫</button>
-
       <button data-op="%" data-variant="op" title="Percent">%</button>
-
       <button data-op="/" data-variant="op" title="Divide">÷</button>
-
       <button data-num="7">7</button>
-
       <button data-num="8">8</button>
-
       <button data-num="9">9</button>
-
       <button data-op="*" data-variant="op" title="Multiply">×</button>
-
       <button data-num="4">4</button>
-
       <button data-num="5">5</button>
-
       <button data-num="6">6</button>
-
       <button data-op="-" data-variant="op" title="Minus">−</button>
-
       <button data-num="1">1</button>
-
       <button data-num="2">2</button>
-
       <button data-num="3">3</button>
-
       <button data-op="+" data-variant="op" title="Plus">+</button>
-
       <button data-num="0" class="span-2">0</button>
-
       <button data-dot=".">.</button>
-
       <button data-equals="=" data-variant="accent" title="Equals (=)">=</button>
-
       <button data-paren="(" title="Left parenthesis">(</button>
-
       <button data-paren=")" title="Right parenthesis">)</button>
-
       <button data-op="^" data-variant="op" title="Power">^</button>
-
       <button data-sign="±" title="Toggle sign">±</button>
-
     </section>
 
-
-
     <div class="footer">
-
       <span>Keys: 0–9 • . • + − × ÷ • ( ) • % ^ • Enter • Esc • Backspace</span>
-
       <div class="switcher">
-
         <button class="switch" id="copy">Copy</button>
-
       </div>
-
     </div>
-
   </main>
 
-
-
 <script>
-
     // --- Calculator logic embedded ---
-
     const valueEl = document.getElementById('value');
-
     const exprEl = document.getElementById('expr');
-
     const statusEl = document.getElementById('status');
-
-    const toggleButton = document.getElementById('toggleMode'); 
-
     
-
     // Globale Zustände
-
     let expr = '', currentNumber = '0';
-
-    let isResult = false; 
-
-    let lastResult = null; 
-
-    let isSequentialMode = false; // false = Wissenschaftlicher Modus / true = Sequenzmodus
-
-    let lastOperand = null; 
-
-    let lastOperator = null;
-
+    let isResult = false; // Flag, um zu wissen, ob das aktuelle 'expr' ein Ergebnis ist
+    let lastResult = null; // Speichert den letzten numerischen Wert für die Weiterrechnung
+    // NEU: Zusätzliche Variablen für die sequentielle Logik bei "=" Wiederholung
+    let lastOperand = null; 
+    let lastOperator = null; 
     
-
-    // Konstanten und Funktionen für den wissenschaftlichen Modus
-
-    const MATH_FUNCS = ['sin', 'cos', 'tan', 'log', 'sqrt', 'abs', 'round'];
-
-    const MATH_CONSTS = {'PI': Math.PI, 'E': Math.E};
-
-
-
     const isOp = c => ['+','-','*','/','%','^'].includes(c);
-
     
-
     function updateDisplay(){
-
-      exprEl.textContent = expr.replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−').replace(/sqrt/g, '√');
-
+      // Zeige den vollständigen Ausdruck oben an (Ersetze interne Operatoren durch Anzeigesymbole)
+      exprEl.textContent = expr.replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−');
+      // Zeige die aktuelle Zahl/das Ergebnis unten an
       valueEl.textContent = currentNumber;
-
-
-
-      if (toggleButton) {
-
-        toggleButton.title = isSequentialMode 
-
-          ? 'Sequenzmodus (Protokollierung) – Klicken für Wissenschaftlichen Modus' 
-
-          : 'Wissenschaftlicher Modus – Klicken für Sequenzmodus (Protokollierung)';
-
-        toggleButton.textContent = isSequentialMode ? 'Seq' : 'Sci';
-
-        toggleButton.style.backgroundColor = isSequentialMode ? '#ffcc00' : '#4CAF50';
-
-      }
-
     }
-
-
-
-    // ⭐ Modus-Umschaltfunktion
-
-    function toggleCalculatorMode() {
-
-        isSequentialMode = !isSequentialMode;
-
-        clearAll(); 
-
-        flash(isSequentialMode ? 'Sequenzmodus AN' : 'Wissenschaftlicher Modus AN');
-
-    }
-
-    
-
-    // ⭐ NEU: Eingabe einer mathematischen Funktion (z.B. sin)
-
-    function pushFunc(f){
-
-        if(isResult) { expr = ''; isResult = false; lastResult = null; }
-
-
-
-        const lastChar = expr.slice(-1);
-
-
-
-        // Füge * ein, wenn eine Zahl oder schließende Klammer davor steht (implizite Multiplikation)
-
-        if(/[\d.)]/.test(lastChar) && expr !== '0') expr += '*';
-
-
-
-        // Füge Funktion und öffnende Klammer hinzu
-
-        expr += f + '(';
-
-        currentNumber = '0';
-
-        updateDisplay();
-
-    }
-
-
-
-    // ⭐ NEU: Eingabe einer mathematischen Konstante (z.B. PI)
-
-    function pushConst(c){
-
-        if(isResult) { expr = ''; isResult = false; lastResult = null; }
-
-
-
-        const lastChar = expr.slice(-1);
-
-
-
-        // Füge * ein, wenn eine Zahl oder schließende Klammer davor steht
-
-        if(/[\d.)]/.test(lastChar) && expr !== '0') expr += '*';
-
-
-
-        expr += c;
-
-        currentNumber = String(MATH_CONSTS[c]); // Zeige den Wert der Konstante an
-
-        updateDisplay();
-
-    }
-
-
-
-
 
     // --- Logik zur Handhabung von Zahlen und Operatoren ---
 
-
-
     function pushNum(n){
-
       if(isResult){ 
-
-          if(!isSequentialMode) expr = ''; 
-
-          if(isSequentialMode) expr = ''; 
-
-
-
+          expr = ''; // Starte eine neue Formel
           isResult = false;
-
-          lastResult = null; 
-
-          lastOperand = null; 
-
-          lastOperator = null;
-
+          lastResult = null; 
+          lastOperand = null;
+          lastOperator = null;
       }
 
-
-
+      // Wenn die letzte Eingabe ein Operator oder eine öffnende Klammer war, starten wir eine neue Zahl
       const lastChar = expr.slice(-1);
-
-      // Anpassung: Neue Zahl startet auch nach einer Funktion oder Konstante.
-
-      if(isOp(lastChar) || lastChar === '(' || expr === '' || MATH_FUNCS.some(f => expr.endsWith(f + '(')) || MATH_CONSTS[lastChar]){
-
+      if(isOp(lastChar) || lastChar === '(' || expr === ''){
         expr += String(n);
-
         currentNumber = String(n);
-
       } 
-
+      // Wenn wir gerade eine Zahl bearbeiten
       else {
+        // Entferne die alte Zahl aus dem Ausdruck
+        const match = expr.match(/(\d+\.?\d*|\.\d+)$/);
+        if(match) {
+            expr = expr.slice(0, expr.length - match[0].length);
+        }
 
-        // Entferne alte Zahl (kann auch Konstante sein, wenn wir den Modus wechseln)
-
-        const match = expr.match(/(\d+\.?\d*|\.\d+|PI|E)$/);
-
-        if(match){
-
-            expr = expr.slice(0, expr.length - match[0].length);
-
-        }
-
-
-
-        if(currentNumber === '0' || MATH_CONSTS[expr.slice(-currentNumber.length)]) currentNumber = String(n);
-
+        // Aktualisiere die aktuelle Zahl und hänge sie an den Ausdruck an
+        if(currentNumber === '0') currentNumber = String(n);
         else currentNumber += String(n);
-
         
-
         expr += currentNumber;
-
       }
-
       updateDisplay();
-
     }
-
-
 
     function pushDot(){
-
       if(isResult){ expr = '0'; isResult = false; }
 
-
-
       const lastChar = expr.slice(-1);
 
-
-
-      if(expr === '' || isOp(lastChar) || lastChar === '(' || /[\w)]/.test(lastChar)){ // Erweitert für Funktionen/Konstanten
-
+      // Starte mit 0. wenn der Ausdruck leer ist oder ein Operator/Klammer davor steht
+      if(expr === '' || isOp(lastChar) || lastChar === '('){
         expr += '0.';
-
         currentNumber = '0.';
-
       } 
-
+      // Wenn wir gerade eine Zahl bearbeiten und noch keinen Punkt haben
       else if(!currentNumber.includes('.')){
-
+        // Entferne die alte Zahl aus dem Ausdruck
         expr = expr.slice(0, expr.length - currentNumber.length);
-
         currentNumber += '.';
-
         expr += currentNumber;
-
       }
-
       updateDisplay();
-
     }
 
-
-
-    // ⭐ Logik nach Modus
-
+    // ⭐ ANGEPASST: Hängt den Operator nach einem Ergebnis an den Ausdruck an
     function pushOp(op){
-
       if(isResult){
-
-          if(!isSequentialMode) {
-
-              const numericValue = currentNumber.replace(/,/g, '').replace(/−/g, '-'); 
-
-              expr = numericValue + op;
-
-          } 
-
-          else {
-
-              if(expr.endsWith('=')) {
-
-                  expr = expr.slice(0, -1);
-
-              }
-
-              expr += op; 
-
-          }
-
+          // Ersetze den gesamten Ausdruck durch das Ergebnis + neuen Operator
+          const numericValue = currentNumber.replace(/,/g, '').replace(/−/g, '-');
+          expr = numericValue + op;
           isResult = false;
-
-          currentNumber = '0'; 
-
-          lastOperator = op;
-
+          currentNumber = '0'; 
+          lastOperator = op; // Speichere den neuen Operator
+          lastOperand = null; // Setze Operand zurück, da eine neue Zahl erwartet wird
           updateDisplay();
-
           return;
-
       }
-
       
-
+      // Ersetze letzten Operator, wenn bereits einer vorhanden ist
       if(isOp(expr.slice(-1))){
-
         expr = expr.slice(0,-1) + op;
-
       } 
-
+      // Füge den Operator hinzu und setze die aktuelle Zahl zurück (für die nächste Eingabe)
       else if(expr !== ''){
-
         expr += op;
-
-        currentNumber = '0'; 
-
+        currentNumber = '0'; 
       }
-
-      lastOperator = op; 
-
+      lastOperator = op;
       updateDisplay();
-
     }
-
     
-
     function pushParen(p){
-
-      if(isResult){ clearAll(); }
-
-
-
-      const lastChar = expr.slice(-1);
-
+      if(isResult){ expr = ''; isResult = false; lastResult = null; }
       
-
+      const lastChar = expr.slice(-1);
+      
       if(p === '('){
-
-        // Im Sci-Modus: Wenn wir keine Funktion davor haben, fügen wir * hinzu
-
-        if(!isSequentialMode && /[\d.)]/.test(lastChar) && expr !== '0') expr += '*';
-
-
-
-        // Wenn die letzte Eingabe kein Operator ist, füge * hinzu (auch für Sequenzmodus)
-
-        if(isSequentialMode && /[\d.)]/.test(lastChar) && expr !== '0') expr += '*';
-
-
-
+        // Füge * ein, wenn eine Zahl oder schließende Klammer davor steht (implizite Multiplikation)
+        if(/[\d.)]/.test(lastChar) && expr !== '0') expr += '*';
         expr += '(';
-
       } else if (p === ')'){
-
+        // Schließende Klammern nur hinzufügen, wenn die Klammernbalance es erlaubt
         const opens = (expr.match(/\(/g) || []).length;
-
         const closes = (expr.match(/\)/g) || []).length;
-
         
-
+        // Nur schließen, wenn geöffnet wurde und der letzte Eintrag keine Operation oder offene Klammer ist
         if(opens > closes && !isOp(lastChar) && lastChar !== '('){
-
           expr += ')';
-
-          // Nach dem Schließen einer Klammer, setze currentNumber auf 0 zurück, 
-
-          // da die nächste Zahl * impliziert
-
-          currentNumber = '0'; 
-
         }
-
       }
-
+      currentNumber = '0';
       updateDisplay();
-
     }
-
-
 
     function backspace(){
-
       if(isResult){ clearAll(); return; }
 
-      if(expr.length === 0 || expr === '0') { clearAll(); return; }
-
-      
-
-      // NEU: Spezialfall für Funktions-Backspace (z.B. lösche 'sin(' auf einmal)
-
-      for(const f of MATH_FUNCS) {
-
-          if (expr.endsWith(f + '(')) {
-
-              expr = expr.slice(0, -(f.length + 1));
-
-              break; 
-
-          }
-
+      if(expr.length === 0 || expr === '0') {
+        clearAll(); return;
       }
-
       
-
       expr = expr.slice(0, -1);
-
       
-
-      // Versuche, die neue aktuelle Zahl/Konstante zu bestimmen
-
+      // Versuche, die neue aktuelle Zahl zu bestimmen
       if(!isOp(expr.slice(-1)) && expr.slice(-1) !== '(' && expr.slice(-1) !== ')'){
-
-        const match = expr.match(/(\d+\.?\d*|\.\d+|PI|E)$/);
-
+        const match = expr.match(/(\d+\.?\d*|\.\d+)$/);
         currentNumber = match ? match[0] : '0';
-
       } else {
-
         currentNumber = '0';
-
       }
-
       
-
       if(expr.length === 0) currentNumber = '0';
-
       updateDisplay();
-
     }
-
     
-
     function toggleSign(){
+      // Vorzeichenumschaltung nur auf die aktuelle Zahl anwenden
+      if(isResult){
+          if(currentNumber === '0' || currentNumber === 'Error') return;
 
-      // ... (Bleibt unverändert)
-
-      if(isResult || currentNumber === '0') return;
-
-
-
-      if(currentNumber.startsWith('−')){
-
-        currentNumber = currentNumber.slice(1); 
-
-        expr = expr.slice(0, expr.length - currentNumber.length - 1) + currentNumber;
+          // Ergebnisvorzeichen umschalten
+          const numericValue = currentNumber.replace(/,/g, '').replace(/−/g, '-');
+          const toggled = (-Number(numericValue)).toString();
+          currentNumber = formatNumber(toggled);
+          // Setze den Ausdruck zurück, damit der neue Wert als Startwert dient
+          expr = currentNumber.replace(/,/g, '').replace(/−/g, '-'); 
+          lastResult = -Number(numericValue);
+          isResult = false; 
 
       } else {
+          if(currentNumber === '0') return;
 
-        currentNumber = '−' + currentNumber; 
+          // Aktuelle Zahl im Ausdruck umschalten
+          expr = expr.slice(0, expr.length - currentNumber.length);
 
-        expr = expr.slice(0, expr.length - currentNumber.length + 1) + '-' + currentNumber.slice(1);
-
+          if(currentNumber.startsWith('−')){
+            currentNumber = currentNumber.slice(1); // Zeichen entfernen
+          } else {
+            currentNumber = '−' + currentNumber; // Zeichen hinzufügen
+          }
+          // Wir verwenden '-' im Ausdruck und ersetzen es nur für die Anzeige
+          expr += currentNumber.replace('−', '-');
       }
-
       updateDisplay();
-
     }
-
-
 
     function clearAll(){
-
       expr = ''; 
-
       currentNumber = '0'; 
-
       isResult = false;
-
-      lastResult = null;
-
-      lastOperand = null; 
-
-      lastOperator = null;
-
+      lastResult = null; 
+      lastOperand = null;
+      lastOperator = null;
       updateDisplay();
-
     }
 
-
-
-    // ⭐ Logik nach Modus
-
+    // ⭐ KORRIGIERTE EQUALS-FUNKTION
     function equals(){
+      let exprToCalc = expr;
+      if (exprToCalc === '') return;
 
-      let fullExpr = expr;
-
-      if (fullExpr === '') return;
-
-
-
-      let exprToCalc = fullExpr;
-
-      
-
-      if (isResult) {
-
-          if (!isSequentialMode && lastOperator && lastOperand) {
-
-              const numericValue = currentNumber.replace(/,/g, '').replace(/−/g, '-'); 
-
-              exprToCalc = numericValue + lastOperator + lastOperand;
-
-              fullExpr = numericValue; 
-
-          } else {
-
-             return; 
-
-          }
-
+      // Sequentielle Berechnung (Wiederholung der letzten Operation)
+      if(isResult && lastResult !== null && lastOperator !== null && lastOperand !== null){
+          const lastResultStr = lastResult.toString();
+          // NEU: Baue den neuen Ausdruck aus dem letzten Ergebnis und der letzten Operation
+          exprToCalc = lastResultStr + lastOperator + lastOperand; 
+          expr = currentNumber.replace(/,/g, '').replace(/−/g, '-') + lastOperator.replace('−', '-') + lastOperand;
       } else {
+          // Speichere Operanden für zukünftige sequentielle Rechnungen (z.B. 5+5=, dann = )
+          const opMatch = exprToCalc.match(/([+\-*/%^])([^+\-*/%^()]+)$/);
+          if (opMatch) {
+              lastOperator = opMatch[1];
+              lastOperand = opMatch[2];
+          } else {
+              // Setze sie zurück, wenn es keine Operator-Operand-Kette am Ende gibt
+              lastOperator = null;
+              lastOperand = null;
+          }
 
-          const match = exprToCalc.match(/(\d+\.?\d*|\.\d+)$/);
-
-          if (match) lastOperand = match[0];
-
-
-
+          // 1. Fehlende Klammern ergänzen
           const opens = (exprToCalc.match(/\(/g)||[]).length;
-
           const closes = (exprToCalc.match(/\)/g)||[]).length;
-
           if(opens > closes) exprToCalc += ')'.repeat(opens - closes);
-
           
-
+          // 2. ⭐ KRITISCH: Letzten Operator oder offene Klammer(n) entfernen, falls der Ausdruck damit endet.
+          // Dies verhindert "5+" oder "5+(" Fehler.
           while(isOp(exprToCalc.slice(-1)) || exprToCalc.slice(-1) === '('){
-
             exprToCalc = exprToCalc.slice(0, -1);
-
+            if (exprToCalc === '') break;
           }
-
       }
 
+      // Wenn nach der Bereinigung nichts mehr übrig ist, brechen wir ab.
+      if (exprToCalc === '') {
+          clearAll();
+          return;
+      }
 
-
-      // Stellen Sie sicher, dass alle PI/E-Konstanten durch ihre Werte ersetzt werden, bevor berechnet wird.
-
-      let finalCalcExpr = exprToCalc.replace(/−/g, '-');
-
-      for(const k in MATH_CONSTS) {
-
-          // Ersetze Konstanten durch ihren Wert, um sie als Zahlen zu tokenisieren.
-
-          finalCalcExpr = finalCalcExpr.replace(new RegExp(k, 'g'), MATH_CONSTS[k]);
-
-      }
-
-
-
-
-
+      let finalExprForCalc = exprToCalc.replace(/−/g, '-');
+      
       try{
-
-        const result = compute(finalCalcExpr); 
-
-        currentNumber = formatNumber(result);
-
-        lastResult = result;
-
+        // Ergebnis berechnen
+        const result = compute(finalExprForCalc); 
         
-
-        if (isSequentialMode) {
-
-           expr = fullExpr.replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−') + '=' + currentNumber;
-
-        } else {
-
-           expr = exprToCalc.replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−') + '=';
-
-        }
-
-
-
+        currentNumber = formatNumber(result);
+        lastResult = result; 
+        
+        // Den gesamten Ausdruck um das Ergebnis erweitern
+        expr = expr.replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−') + '=' + currentNumber;
+        
         isResult = true;
-
         updateDisplay();
-
       }catch(e){
-
         currentNumber = 'Error'; 
-
-        expr = fullExpr.replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−') + '=';
-
+        // Füge das '=' an den ursprünglichen Ausdruck (vor der Bereinigung) an
+        expr = expr.replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−') + '=';
         isResult = true;
-
         updateDisplay();
-
         console.error("Calculation Error:", e);
-
       }
-
     }
-
-
 
     function formatNumber(n){if(!isFinite(n)) return 'Error'; const abs=Math.abs(n); if(abs!==0&&(abs<1e-6||abs>=1e12)) return n.toExponential(8).replace(/\.0+e/,'e'); return n.toLocaleString(undefined,{maximumFractionDigits:12});}
-
     
-
-    // ⭐ ERWEITERTE COMPUTE-Funktion (Jetzt mit Funktionen und Konstanten-Ersetzung)
-
+    // ⭐ VERBESSERTE COMPUTE-Funktion (Shunting-Yard & RPN Auswertung)
     function compute(s){
+      // Bereinige doppelte Operatoren und leere Ausdrücke (Sicherheit)
+      s = s.replace(/([+\-*/%^])\1+/g, '$1'); 
+      if (s === '') return 0;
 
-      // Tokenisierung: Beinhaltet Zahlen, Operatoren, Klammern und Funktionen
-
-      // Die Konstanten (PI, E) wurden bereits durch ihre numerischen Werte ersetzt.
-
+      // Tokenisierung: Zahlen (mit Dezimalpunkt), Klammern und Operatoren
       const tokens = [];
-
-      const funcRegex = `(${MATH_FUNCS.join('|')})`
-
-      const re = new RegExp(`\\d*\\.?\\d+|[()+\\-*/%^]|${funcRegex}`, 'g');
-
+      const re = /\d*\.?\d+|[()+\-*/%^]/g;
       let m; 
-
       while((m=re.exec(s))){tokens.push(m[0]);} 
 
-
-
-      // Unäres Minus korrigieren
-
+      // Unäres Minus korrigieren (z.B. 5*-3 oder -5)
       for(let i=0;i<tokens.length;i++){
-
         if(tokens[i]==='-'){
-
-          if(i===0 || (isOp(tokens[i-1]) || tokens[i-1]==='(')){
-
+          // Unär, wenn am Anfang steht oder auf Operator/Klammer folgt
+          if(i===0 || (isOp(tokens[i-1]) && tokens[i-1] !== 'u-') || tokens[i-1]==='('){
             tokens[i]='u-'; 
-
           }
-
         }
-
       } 
-
       
-
-      // Priorität und Assoziativität (Funktionen haben höchste Priorität)
-
-      const funcPrec = MATH_FUNCS.reduce((acc, f) => ({...acc, [f]: 5}), {});
-
-      const prec={...funcPrec, 'u-':4,'^':3,'*':2,'/':2,'%':2,'+':1,'-':1}; 
-
+      // Priorität und Assoziativität (Punkt-vor-Strich-Regel)
+      const prec={'u-':4,'^':3,'*':2,'/':2,'%':2,'+':1,'-':1}; 
       const rightAssoc={'^':true,'u-':true}; 
-
       
-
       // Shunting-Yard-Algorithmus (Infix zu Postfix)
-
       const out=[],stack=[]; 
-
       for(const t of tokens){
-
-        if(t in MATH_FUNCS || t in MATH_CONSTS){ // Konstanten wurden ersetzt, aber Funktionen erkennen
-
-             stack.push(t);
-
-        }
-
-        else if(/\d/.test(t[0]) || t.startsWith('.')){ 
-
-          out.push(Number(t)); 
-
-        } else if(t in prec){ 
-
+        if(/\d/.test(t[0]) || t.startsWith('.')){ 
+          out.push(Number(t)); 
+        } else if(t in prec){ 
           while(stack.length){
-
             const top=stack[stack.length-1]; 
-
             if(top in prec){
-
               if((rightAssoc[t]&&prec[t]<prec[top])||(!rightAssoc[t]&&prec[t]<=prec[top])){
-
                 out.push(stack.pop());
-
               } else break;
-
             } else break;
-
           } 
-
           stack.push(t);
-
-        } else if(t==='('){ 
-
+        } else if(t==='('){ 
           stack.push(t); 
-
-        } else if(t===')'){ 
-
+        } else if(t===')'){ 
           while(stack.length&&stack[stack.length-1]!=='(') out.push(stack.pop()); 
-
           if(stack.pop()!=='(') throw new Error("Mismatched parentheses");
-
-          
-
-          // NEU: Nach dem Pop der '(' überprüfen, ob eine Funktion oben auf dem Stack ist
-
-          const top = stack[stack.length-1];
-
-          if(MATH_FUNCS.includes(top)) out.push(stack.pop());
-
         } 
-
       } 
-
       while(stack.length){
-
         const x=stack.pop(); 
-
         if(x==='('||x===')') throw new Error("Mismatched parentheses"); 
-
         out.push(x);
-
       } 
-
       
-
       // Postfix (RPN) Auswertung
-
       const st=[]; 
-
       for(const t of out){
-
         if(typeof t==='number') st.push(t); 
-
         else if(t==='u-') st.push(-st.pop()); 
-
-        else if(MATH_FUNCS.includes(t)){
-
-            const val = st.pop();
-
-            let r;
-
-            switch(t){
-
-                case 'sin': r = Math.sin(val); break;
-
-                case 'cos': r = Math.cos(val); break;
-
-                case 'tan': r = Math.tan(val); break;
-
-                case 'log': r = Math.log(val); break;
-
-                case 'sqrt': r = Math.sqrt(val); break;
-
-                case 'abs': r = Math.abs(val); break;
-
-                case 'round': r = Math.round(val); break;
-
-                default: throw new Error("Unknown function");
-
-            }
-
-            st.push(r);
-
-        }
-
         else {
-
           if(st.length < 2) throw new Error("Insufficient operands");
-
           const b=st.pop(); 
-
           const a=st.pop(); 
-
           let r; 
-
           switch(t){
-
             case '+':r=a+b;break;
-
             case '-':r=a-b;break;
-
             case '*':r=a*b;break;
-
-            case '/':r=b===0?Infinity:a/b;break;
-
+            case '/':r=b===0?Infinity:a/b;break; // Division durch 0 führt zu Infinity -> 'Error' in formatNumber
             case '%':r=a%b;break;
-
             case '^':r=Math.pow(a,b);break;
-
             default:throw new Error("Unknown operator");
-
           } 
-
           st.push(r);
-
         } 
-
       } 
-
       if(st.length!==1) throw new Error("Invalid expression structure"); 
-
       return st[0];
-
     }
 
-
-
-    // --- Event Listener (mit Modus-Umschalter und neuen Funktionen) ---
-
-
+    // --- Event Listener ---
 
     document.querySelectorAll('button[data-num]').forEach(b=>b.addEventListener('click',()=>pushNum(b.dataset.num),{passive:true}));
-
     document.querySelectorAll('button[data-op]').forEach(b=>b.addEventListener('click',()=>pushOp(b.dataset.op),{passive:true}));
-
-    
-
-    // ⭐ NEU: Funktions- und Konstanten-Listener
-
-    document.querySelectorAll('button[data-func]').forEach(b=>b.addEventListener('click',()=>pushFunc(b.dataset.func),{passive:true}));
-
-    document.querySelectorAll('button[data-const]').forEach(b=>b.addEventListener('click',()=>pushConst(b.dataset.const),{passive:true}));
-
-
-
     document.querySelector('button[data-dot]')?.addEventListener('click',pushDot,{passive:true});
-
     document.querySelector('button[data-equals]')?.addEventListener('click',equals,{passive:true});
-
     document.querySelector('button[data-sign]')?.addEventListener('click',toggleSign,{passive:true});
-
     document.querySelector('button[title="Clear (Esc)"]')?.addEventListener('click',clearAll,{passive:true});
-
     document.querySelector('button[title="Backspace"]')?.addEventListener('click',backspace,{passive:true});
-
     document.querySelectorAll('button[data-paren]').forEach(b=>b.addEventListener('click',()=>pushParen(b.dataset.paren),{passive:true}));
-
     document.getElementById('copy').addEventListener('click',()=>{const txt=valueEl.textContent||''; navigator.clipboard?.writeText(txt).then(()=>{flash('Copied');}).catch(()=>{flash('Copy failed');})});
-
-    
-
-    document.getElementById('toggleMode')?.addEventListener('click', toggleCalculatorMode, {passive:true});
-
-
-
     function flash(msg){statusEl.textContent=msg; setTimeout(()=>statusEl.textContent='Offline-ready',1200);}
-
     
-
     // Tastatur-Handler angepasst
-
     window.addEventListener('keydown',(e)=>{
-
       const k=e.key;
-
       if(/^[0-9]$/.test(k)){pushNum(k);e.preventDefault();return;} 
-
       if(k==='.') {pushDot();e.preventDefault();return;} 
-
       if(['+','-','*','/','%','^'].includes(k)){pushOp(k);e.preventDefault();return;} 
-
       if(k==='('||k===')'){pushParen(k);e.preventDefault();return;} 
-
       if(k==='Enter'||k==='='){e.preventDefault();equals();return;} 
-
       if(k==='Backspace'){backspace();e.preventDefault();return;} 
-
       if(k==='Escape'){clearAll();e.preventDefault();return;} 
-
-      if(k==='m' || k==='M'){toggleCalculatorMode();e.preventDefault();return;} 
-
     });
-
     updateDisplay();
 
-
-
     // --- Service Worker for offline GitHub Pages ---
-
     if('serviceWorker' in navigator){
-
       navigator.serviceWorker.register('sw.js').then(()=>console.log('SW registered')).catch(console.error);
-
     }
-
   </script>
-
 </body>
-
 </html>
