@@ -110,6 +110,7 @@
 
     function pushNum(n){
       if(isResult){ 
+          // Wenn eine Zahl nach dem Ergebnis gedrückt wird, starte einen neuen Ausdruck
           expr = ''; // Starte eine neue Formel
           isResult = false;
           lastResult = null; // Setze den letzten Ergebniswert zurück
@@ -159,19 +160,22 @@
       updateDisplay();
     }
 
-    // ⭐ ANGEPASST: Hängt den Operator nach einem Ergebnis an den Ausdruck an
+    // ⭐ KORREKTUR: Die Logik, um nach einem Ergebnis weiterzurechnen, wurde angepasst.
     function pushOp(op){
       if(isResult){
-          // Wenn isResult=true, hängen wir den Operator an das Ende des Ausdrucks an
-          // und verwenden den letzten Ergebniswert (lastResult) implizit
-          // Wir müssen sicherstellen, dass das '=' Zeichen vorher entfernt wird, 
-          // falls wir in equals() es zum expr hinzugefügt haben.
-          if(expr.endsWith('=')) {
-              expr = expr.slice(0, -1);
+          // Wenn isResult=true, muss der Ausdruck auf das Ergebnis zurückgesetzt werden,
+          // bevor der neue Operator angehängt wird (z.B. von "5+5=10" zu "10+")
+          if (lastResult !== null) {
+              // Verwende currentNumber (den formatierten Ergebnis-String) als Basis
+              expr = currentNumber; 
+          } else {
+              // Falls lastResult aus irgendeinem Grund null ist, starte mit '0'
+              expr = '0';
           }
-
-          expr += op; 
+          
+          expr += op;  
           isResult = false;
+          // lastResult bleibt für die '=' Wiederholung.
           currentNumber = '0'; // Setze currentNumber zurück, um die nächste Zahl einzugeben
           updateDisplay();
           return;
@@ -224,8 +228,8 @@
       
       // Versuche, die neue aktuelle Zahl zu bestimmen, wenn eine Zahl gelöscht wurde
       if(!isOp(expr.slice(-1)) && expr.slice(-1) !== '(' && expr.slice(-1) !== ')'){
-        const match = expr.match(/(\d+\.?\d*|\.\d+)$/);
-        currentNumber = match ? match[0] : '0';
+        const match = expr.match(/(-?\d+\.?\d*|\.\d+)$/); // Unterstütze negatives Vorzeichen beim Parsen
+        currentNumber = match ? match[0].replace('-', '−') : '0';
       } else {
         currentNumber = '0';
       }
@@ -235,16 +239,35 @@
     }
     
     function toggleSign(){
-      if(isResult || currentNumber === '0') return;
-
       // Nur das Vorzeichen der aktuellen Zahl ändern
+      // Wenn das Ergebnis angezeigt wird, ändere das Vorzeichen des Ergebnisses
+      if(isResult){
+          // Wenn bereits ein Ergebnis, muss es wieder in den Ausdruck
+          const numericValue = compute(currentNumber.replace(/−/g, '-'));
+          const newValue = -numericValue;
+          
+          expr = formatNumber(numericValue) + '=' + formatNumber(newValue);
+          currentNumber = formatNumber(newValue);
+          lastResult = newValue;
+          updateDisplay();
+          return;
+      }
+      
+      if(currentNumber === '0') return;
+
+      // Vorzeichen in der aktuellen Zahl umschalten
       if(currentNumber.startsWith('−')){
-        currentNumber = currentNumber.slice(1); // Zeichen entfernen
-        expr = expr.slice(0, expr.length - currentNumber.length - 1) + currentNumber;
+        // Zahl aus dem Ausdruck entfernen: '... -5' -> '...'
+        expr = expr.slice(0, expr.length - currentNumber.length);
+        currentNumber = currentNumber.slice(1); // Vorzeichen entfernen
+        // Zahl wieder anhängen: '...5'
+        expr += currentNumber;
       } else {
-        currentNumber = '−' + currentNumber; // Zeichen hinzufügen
-        // Wir verwenden '-' im Ausdruck und ersetzen es nur für die Anzeige
-        expr = expr.slice(0, expr.length - currentNumber.length + 1) + '-' + currentNumber.slice(1);
+        // Zahl aus dem Ausdruck entfernen: '... 5' -> '...'
+        expr = expr.slice(0, expr.length - currentNumber.length);
+        currentNumber = '−' + currentNumber; // Vorzeichen hinzufügen
+        // Zahl mit Minus im Ausdruck anhängen: '... -5'
+        expr += '-' + currentNumber.slice(1);
       }
       updateDisplay();
     }
@@ -262,16 +285,8 @@
     // ⭐ ANGEPASST: Führt die sequentielle Berechnung durch
     function equals(){
       let exprToCalc = expr;
-      if (exprToCalc === '') return;
+      if (exprToCalc === '' || exprToCalc.endsWith('=')) return;
       
-      // Wenn wir uns im Modus "nach Ergebnis" befinden und der Benutzer erneut "=" drückt
-      if(isResult && lastResult !== null){
-          // Wir führen eine Wiederholung der letzten Operation durch, falls implementiert (komplizierter, hier vereinfacht)
-          // Wir gehen davon aus, dass wir einfach mit dem aktuellen Zustand weiterrechnen
-          // oder beenden die Sequenz, falls keine weitere Operation angehängt wird
-          return;
-      }
-
       // 1. Fehlende Klammern ergänzen
       const opens = (exprToCalc.match(/\(/g)||[]).length;
       const closes = (exprToCalc.match(/\)/g)||[]).length;
@@ -282,37 +297,32 @@
         exprToCalc = exprToCalc.slice(0, -1);
       }
 
-      // 3. Wenn es ein vorheriges Ergebnis gibt, starten wir die Formel damit
+      // 3. Den Ausdruck vorbereiten (Alle '−' zu echten '-')
       let finalExprForCalc = exprToCalc.replace(/−/g, '-');
       
-      // Wenn es bereits einen Gleich-Zeichen-Teil im Ausdruck gibt (z.B. 5+5=10), 
-      // müssen wir den Teil vor dem letzten '=' entfernen und das letzte Ergebnis (lastResult) als Startwert verwenden.
-      // Dies ist der Schlüssel für die sequentielle Berechnung.
-      let fullExprWithOps = finalExprForCalc; // Behält den Teil mit den Operatoren (z.B. 10+5)
-
-      if (lastResult !== null) {
-          // Ersetze den vorherigen Ausdrucksteil durch den letzten numerischen Wert
-          // Wir suchen den Ausdrucksteil NACH dem letzten '='
-          const parts = finalExprForCalc.split('=');
-          if (parts.length > 1) {
-              // Verwende den Teil nach dem letzten '=' (z.B. '+5') und kombiniere ihn mit lastResult
-              const lastCalculationPart = parts.pop(); 
-              // Wir müssen den letzten Ausdrucksteil aus dem aktuellen expr extrahieren, um ihn zu berechnen.
-              // Wir erstellen den vollständigen, rechenbaren Ausdruck neu: [lastResult] + [letzter Operator und Zahl]
-              // Da wir den aktuellen 'expr' nicht einfach parsen können, 
-              // verwenden wir hier eine einfache Lösung: berechne den gesamten aktuellen exprToCalc.
+      // Bereinige unnötige Zeichen (z.B. nach einem Fehler)
+      const parts = finalExprForCalc.split('=');
+      if (parts.length > 1) {
+          finalExprForCalc = parts.pop(); // Verwende nur den Teil nach dem letzten '='
+          if (lastResult !== null) {
+               // Wenn ein vorheriges Ergebnis gespeichert ist, setze es als Startwert, 
+               // falls der neue Ausdruck mit einem Operator beginnt (z.B. '+5')
+               const startChar = finalExprForCalc.charAt(0);
+               if (isOp(startChar) || startChar === '(') {
+                   finalExprForCalc = lastResult + finalExprForCalc;
+               }
           }
       }
       
       try{
-        // Ergebnis berechnen (Der Shunting-Yard Algorithmus sollte mit dem Ausdruck klar kommen)
+        // Ergebnis berechnen
         const result = compute(finalExprForCalc); 
         
         // Ergebnis formatieren und in der Hauptanzeige speichern
         currentNumber = formatNumber(result);
         
         // Den gesamten Ausdruck um das Ergebnis erweitern
-        // NEU: Hänge das = und das aktuelle Ergebnis an den bereits bestehenden Ausdruck an.
+        // Verwende den vollständigen Ausdruck, der zum Ergebnis führte (kann '10+5' sein, falls weitergerechnet wurde)
         expr = expr.replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−') + '=' + currentNumber;
         
         isResult = true;
@@ -322,6 +332,7 @@
         currentNumber = 'Error'; 
         expr = expr.replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−') + '=';
         isResult = true;
+        lastResult = null; // Setze zurück, damit der nächste Klick alles löscht
         updateDisplay();
         console.error("Calculation Error:", e);
       }
@@ -332,12 +343,12 @@
     
     // Stark überarbeitete und korrigierte COMPUTE-Funktion (Shunting-Yard & RPN Auswertung)
     function compute(s){
-      // Bereinige doppelte Operatoren
-      s = s.replace(/([+\-*/%^])\1+/g, '$1'); 
+      // Bereinige doppelte Operatoren und das Gleichheitszeichen
+      s = s.replace(/([+\-*/%^])\1+/g, '$1').replace(/=/g, ''); 
 
       // Tokenisierung: Zahlen (mit Dezimalpunkt), Klammern und Operatoren
       const tokens = [];
-      const re = /\d*\.?\d+|[()+\-*/%^]/g;
+      const re = /(-?\d*\.?\d+)|[()+\-*/%^]/g; // Erlaube negatives Vorzeichen für Zahlen zu Beginn
       let m; 
       while((m=re.exec(s))){tokens.push(m[0]);} 
 
@@ -358,10 +369,8 @@
       // Shunting-Yard-Algorithmus (Infix zu Postfix)
       const out=[],stack=[]; 
       for(const t of tokens){
-        // Wenn das Token ein Ergebnis-Gleichheitszeichen ist, ignorieren wir es für die Berechnung
-        if(t === '=') continue; 
-
-        if(/\d/.test(t[0]) || t.startsWith('.')){ 
+        // Prüfe, ob das Token eine Zahl ist
+        if(!isNaN(parseFloat(t)) && isFinite(t)){ 
           out.push(Number(t)); // Zahl
         } else if(t in prec){ // Operator
           while(stack.length){
