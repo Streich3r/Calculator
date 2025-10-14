@@ -582,7 +582,7 @@ function equals(){
 
     // --- Service Worker for offline GitHub Pages ---
     if('serviceWorker' in navigator){
-      // navigator.serviceWorker.register('sw.js').then(()=>console.log('SW registered')).catch(console.error);
+     navigator.serviceWorker.register('sw.js').then(()=>console.log('SW registered')).catch(console.error);
     }
   </script>
 </body>
