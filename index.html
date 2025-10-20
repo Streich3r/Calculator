@@ -441,14 +441,20 @@ function equals(){
       let m; 
       while((m=re.exec(s))){tokens.push(m[0]);} 
 
-      // Unäres Minus korrigieren
-      for(let i=0;i<tokens.length;i++){
-        if(tokens[i]==='-'){
-          if(i===0 || (isOp(tokens[i-1]) || tokens[i-1]==='(' || tokens[i-1].match(/sin|cos|tan|sqrt|log10|ln|pow2|fact/))){
-            tokens[i]='u-'; 
-          }
-        }
-      } 
+  // Unäres Minus korrigieren (verbesserte Logik)
+for(let i=0;i<tokens.length;i++){
+  if(tokens[i]==='-'){
+    const prev = tokens[i-1];
+    // Unäres Minus ist:
+    // 1. Am Anfang (i===0) ODER
+    // 2. Nach einem Operator (isOp(prev)) ODER
+    // 3. Nach einer öffnenden Klammer '('
+    // Da Funktionen '(' direkt nach dem Namen hinzufügen, wird dies abgedeckt.
+    if(i===0 || prev === '(' || isOp(prev) || (typeof prev === 'string' && prev.match(/sin|cos|tan|sqrt|log10|ln|pow2|fact|yroot|logx/))) {
+      tokens[i]='u-';
+    }
+  }
+}
       
       const prec={'u-':4,'^':3,'*':2,'/':2,'%':2,'yroot':3,'logx':3,'+':1,'-':1, 'sin':5,'cos':5,'tan':5,'sqrt':5,'log10':5,'ln':5,'pow2':5,'fact':5}; 
       const rightAssoc={'^':true,'u-':true}; 
