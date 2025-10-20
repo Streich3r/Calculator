@@ -157,18 +157,19 @@
           .replace(/\^/g, '^').replace(/yroot/g, 'ⁿ√')
           .replace(/logx/g, 'logᵪ');
       
-
       // Ersetze Funktionsnamen durch ihre Display-Form
       displayExpr = displayExpr.replace(/pow2\((.*?)\)/g, '$1²');
       displayExpr = displayExpr.replace(/sqrt\(/g, '√('); 
-  
+      
 
       exprEl.textContent = displayExpr;
       valueEl.textContent = currentNumber;
       statusEl.textContent = isAdvanced ? 'Advanced' : 'Normal';
     }
 
-    // --- Core Logic (Unverändert/Korrigiert) ---
+    // ------------------------------------
+    // --- Core UI/Eingabelogik ---
+    // ------------------------------------
 
     function pushNum(n){
       if(isResult){ 
@@ -319,7 +320,7 @@
       updateDisplay();
     }
 
-    // --- NEUE ADVANCED LOGIK ---
+    // --- Advanced Logik und Moduswechsel ---
 
     function pushFunction(fn){
         if(isResult){ expr = ''; isResult = false; }
@@ -353,201 +354,223 @@
         updateDisplay();
     }
 
-    // ⭐ NEU: Moduswechsel-Funktion
+    // Moduswechsel-Funktion
     function toggleMode(){
         isAdvanced = !isAdvanced;
         appEl.classList.toggle('advanced', isAdvanced);
         updateDisplay();
-        // Optional: clearAll() beim Moduswechsel, um Verwirrung zu vermeiden
         clearAll();
     }
 
+    // ------------------------------------
+    // --- Berechnungslogik (RPN/Shunting-Yard) ---
+    // ------------------------------------
 
- // --- Berechnungslogik (erweitert für neue Funktionen) ---
-
-function equals(){
-    let exprToCalc = expr;
-    if (exprToCalc === '' || exprToCalc.endsWith('=')) return;
-    
-    const opens = (exprToCalc.match(/\(/g)||[]).length;
-    const closes = (exprToCalc.match(/\)/g)||[]).length;
-    
-    // ⭐ ANPASSUNG: Fehlende Klammern zur Berechnung und zur Anzeige hinzufügen
-    const neededCloses = opens - closes;
-    if(neededCloses > 0) {
-        const closingParens = ')'.repeat(neededCloses);
-        exprToCalc += closingParens; // Für die Berechnung
-        expr += closingParens;      // Für die Anzeige
-    }
-    
-    // Entferne abschließende Operatoren oder öffnende Klammern vor der Berechnung
-    while(isOp(exprToCalc.slice(-1)) || exprToCalc.slice(-1) === '('){
-        exprToCalc = exprToCalc.slice(0, -1);
-        // ⭐ Anpassung: Auch von der Anzeige-Variable entfernen
-        expr = expr.slice(0, -1);
-    }
-
-    let finalExprForCalc = exprToCalc.replace(/−/g, '-');
-    
-    const parts = finalExprForCalc.split('=');
-    if (parts.length > 1) {
-        finalExprForCalc = parts.pop(); 
-        if (lastResult !== null) {
-            const startChar = finalExprForCalc.charAt(0);
-            if (isOp(startChar) || startChar === '(') {
-                finalExprForCalc = lastResult + finalExprForCalc;
-            }
+    function equals(){
+        let exprToCalc = expr;
+        if (exprToCalc === '' || exprToCalc.endsWith('=')) return;
+        
+        const opens = (exprToCalc.match(/\(/g)||[]).length;
+        const closes = (exprToCalc.match(/\)/g)||[]).length;
+        
+        // Fehlende Klammern zur Berechnung und zur Anzeige hinzufügen
+        const neededCloses = opens - closes;
+        if(neededCloses > 0) {
+            const closingParens = ')'.repeat(neededCloses);
+            exprToCalc += closingParens; // Für die Berechnung
+            expr += closingParens;       // Für die Anzeige
         }
-    } 
-    
-    // Der Rest der Funktion (try/catch Block) muss beibehalten werden,
-    // um das Ergebnis zu berechnen und die finale Anzeige zu aktualisieren.
-    try{
-        const result = compute(finalExprForCalc); 
         
-        currentNumber = formatNumber(result);
+        // Entferne abschließende Operatoren oder öffnende Klammern vor der Berechnung
+        while(isOp(exprToCalc.slice(-1)) || exprToCalc.slice(-1) === '('){
+            exprToCalc = exprToCalc.slice(0, -1);
+            // Auch von der Anzeige-Variable entfernen
+            expr = expr.slice(0, -1);
+        }
+
+        let finalExprForCalc = exprToCalc.replace(/−/g, '-');
         
-        // Die Variable 'expr' enthält jetzt den korrigierten Ausdruck (mit Klammern)
-        // und wird hier final für die Anzeige vorbereitet.
-        expr = expr.replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−') + '=' + currentNumber;
+        // Logik für fortlaufende Berechnungen (z.B. 5 + = )
+        const parts = finalExprForCalc.split('=');
+        if (parts.length > 1) {
+            finalExprForCalc = parts.pop(); 
+            if (lastResult !== null) {
+                const startChar = finalExprForCalc.charAt(0);
+                if (isOp(startChar) || startChar === '(') {
+                    finalExprForCalc = lastResult + finalExprForCalc;
+                }
+            }
+        } 
         
-        isResult = true;
-        lastResult = result; 
-        updateDisplay();
-    }catch(e){
-        currentNumber = 'Error'; 
-        expr = expr.replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−') + '=';
-        isResult = true;
-        lastResult = null;
-        updateDisplay();
-        console.error("Calculation Error:", e);
+        try{
+            const result = compute(finalExprForCalc); 
+            
+            currentNumber = formatNumber(result);
+            
+            // Finale Anzeige vorbereiten
+            expr = expr.replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−') + '=' + currentNumber;
+            
+            isResult = true;
+            lastResult = result; 
+            updateDisplay();
+        }catch(e){
+            currentNumber = 'Error'; 
+            expr = expr.replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−') + '=';
+            isResult = true;
+            lastResult = null;
+            updateDisplay();
+            console.error("Calculation Error:", e);
+        }
     }
-}
 
     function formatNumber(n){if(!isFinite(n)) return 'Error'; const abs=Math.abs(n); if(abs!==0&&(abs<1e-6||abs>=1e12)) return n.toExponential(8).replace(/\.0+e/,'e'); return n.toLocaleString(undefined,{maximumFractionDigits:12});}
     
-    // ⭐ ERWEITERT: compute-Funktion für mathematische Funktionen
+    // ⭐ KORRIGIERTE UND EINZIGE compute-Funktion
+    // Diese Funktion löst das Subtraktions- und Unär-Minus-Problem durch robuste Tokenisierung.
     function compute(s){
-      s = s.replace(/([+\-*/%^])\1+/g, '$1').replace(/=/g, ''); 
+        // 1. Initialisierung und Vorbereitung
+        s = s.replace(/([+\-*/%^])\1+/g, '$1').replace(/=/g, ''); 
+        
+        // Füge Leerzeichen um Operatoren/Klammern ein, um eine einfache Trennung zu gewährleisten
+        // Dies ist der Schlüssel, um 5-5 korrekt zu tokenisieren
+        s = s.replace(/([()+\-*/%^])/g, ' $1 '); 
+        s = s.replace(/\s+/g, ' ').trim(); // Entferne doppelte Leerzeichen
 
-      // Ersetze Spezialfunktionen in ihren Token-Form
-      s = s.replace(/sin\(/g, 'sin(').replace(/cos\(/g, 'cos(').replace(/tan\(/g, 'tan(');
-      s = s.replace(/sqrt\(/g, 'sqrt(').replace(/log10\(/g, 'log10(').replace(/ln\(/g, 'ln(');
-      s = s.replace(/pow2\(/g, 'pow2(').replace(/fact\(/g, 'fact(');
-      
-      // Tokenisierung (jetzt mit Funktionsnamen)
-      const tokens = [];
-      const re = /(-?\d*\.?\d+)|[()+\-*/%^]|(sin|cos|tan|sqrt|log10|ln|pow2|fact|yroot|logx)/g; 
-      let m; 
-      while((m=re.exec(s))){tokens.push(m[0]);} 
+        // Tokenisierung mit Split nach Leerzeichen
+        const rawTokens = s.split(' ').filter(t => t.length > 0);
+        
+        // 2. Unäres Minus (u-) und Funktions-Tokenisierung
+        const finalTokens = [];
+        const functionNames = ['sin', 'cos', 'tan', 'sqrt', 'log10', 'ln', 'pow2', 'fact'];
+        const binaryOperators = ['+', '-', '*', '/', '%', '^', 'yroot', 'logx'];
 
-  // Unäres Minus korrigieren (verbesserte Logik)
-for(let i=0;i<tokens.length;i++){
-  if(tokens[i]==='-'){
-    const prev = tokens[i-1];
-    // Unäres Minus ist:
-    // 1. Am Anfang (i===0) ODER
-    // 2. Nach einem Operator (isOp(prev)) ODER
-    // 3. Nach einer öffnenden Klammer '('
-    // Da Funktionen '(' direkt nach dem Namen hinzufügen, wird dies abgedeckt.
-    if(i===0 || prev === '(' || isOp(prev) || (typeof prev === 'string' && prev.match(/sin|cos|tan|sqrt|log10|ln|pow2|fact|yroot|logx/))) {
-      tokens[i]='u-';
-    }
-  }
-}
-      
-      const prec={'u-':4,'^':3,'*':2,'/':2,'%':2,'yroot':3,'logx':3,'+':1,'-':1, 'sin':5,'cos':5,'tan':5,'sqrt':5,'log10':5,'ln':5,'pow2':5,'fact':5}; 
-      const rightAssoc={'^':true,'u-':true}; 
-      
-      // Shunting-Yard (Infix zu Postfix)
-      const out=[],stack=[]; 
-      for(const t of tokens){
-        if(!isNaN(parseFloat(t)) && isFinite(t)){ 
-          out.push(Number(t)); 
-        } else if(t in prec){ 
-          while(stack.length){
-            const top=stack[stack.length-1]; 
-            if(top in prec){
-              if((rightAssoc[t]&&prec[t]<prec[top])||(!rightAssoc[t]&&prec[t]<=prec[top])){
-                out.push(stack.pop());
-              } else break;
-            } else break;
-          } 
-          stack.push(t);
-        } else if(t.match(/sin|cos|tan|sqrt|log10|ln|pow2|fact/)){ // Funktion
-            stack.push(t);
-        } else if(t==='('){ 
-          stack.push(t); 
-        } else if(t===')'){ 
-          while(stack.length&&stack[stack.length-1]!=='(') out.push(stack.pop()); 
-          if(stack.pop()!=='(') throw new Error("Mismatched parentheses");
-          // Nach schließender Klammer, Pop die Funktion, falls vorhanden
-          const top = stack[stack.length-1];
-          if(top.match(/sin|cos|tan|sqrt|log10|ln|pow2|fact/)) out.push(stack.pop());
-        } 
-      } 
-      while(stack.length){
-        const x=stack.pop(); 
-        if(x==='('||x===')') throw new Error("Mismatched parentheses"); 
-        out.push(x);
-      } 
-      
-      // Postfix (RPN) Auswertung
-      const st=[]; 
-      for(const t of out){
-        if(typeof t==='number') st.push(t); 
-        else if(t==='u-') st.push(-st.pop()); 
-        else if(t.match(/sin|cos|tan|sqrt|log10|ln|pow2|fact/)){
-            const a = st.pop();
-            let r;
-            switch(t){
-                case 'sin': r = Math.sin(a); break;
-                case 'cos': r = Math.cos(a); break;
-                case 'tan': r = Math.tan(a); break;
-                case 'sqrt': r = Math.sqrt(a); break;
-                case 'log10': r = Math.log10(a); break;
-                case 'ln': r = Math.log(a); break;
-                case 'pow2': r = Math.pow(a, 2); break;
-                case 'fact': 
-                    // Einfache Fakultät (nur für nicht-negative Ganzzahlen)
-                    if (a < 0 || a !== Math.floor(a)) throw new Error("Factorial error");
-                    r = 1;
-                    for(let i=2; i<=a; i++) r *= i;
-                    break;
-                default: throw new Error("Unknown function");
+        for(let i = 0; i < rawTokens.length; i++){
+            const t = rawTokens[i];
+            
+            if (t === '-') {
+                const prev = rawTokens[i-1];
+                // Unäres Minus, wenn:
+                // 1. Erster Token ODER
+                // 2. Nach einem binären Operator ODER
+                // 3. Nach einer öffnenden Klammer ODER
+                // 4. Nach einem Funktionsnamen
+                if(i === 0 || binaryOperators.includes(prev) || functionNames.includes(prev) || prev === '('){
+                    finalTokens.push('u-');
+                } else {
+                    finalTokens.push(t); // Binäres Minus (Subtraktion)
+                }
+            } else {
+                finalTokens.push(t);
             }
-            st.push(r);
         }
-        else {
-          if(st.length < 2) throw new Error("Insufficient operands");
-          const b=st.pop(); 
-          const a=st.pop(); 
-          let r; 
-          switch(t){
-            case '+':r=a+b;break;
-            case '-':r=a-b;break;
-            case '*':r=a*b;break;
-            case '/':r=b===0?Infinity:a/b;break;
-            case '%':r=a%b;break;
-            case '^':r=Math.pow(a,b);break;
-            case 'yroot':r=Math.pow(b, 1/a);break; // a ⁿ√ b (Basis a, Exponent 1/a)
-            case 'logx':r=Math.log(b) / Math.log(a);break; // logₐ(b)
-            default:throw new Error("Unknown operator");
-          } 
-          st.push(r);
+
+        // Prioritäten und Assoziativität
+        const prec = {'u-':4,'^':3,'*':2,'/':2,'%':2,'yroot':3,'logx':3,'+':1,'-':1, 'sin':5,'cos':5,'tan':5,'sqrt':5,'log10':5,'ln':5,'pow2':5,'fact':5}; 
+        const rightAssoc = {'^':true,'u-':true}; 
+        
+        // 3. Shunting-Yard (Infix zu Postfix)
+        const out=[],stack=[]; 
+        for(const t of finalTokens){
+            // Zahl
+            if(!isNaN(parseFloat(t)) && isFinite(t)){ 
+                out.push(Number(t)); 
+            } 
+            // Operator / Funktion
+            else if(t in prec){ 
+                while(stack.length){
+                    const top = stack[stack.length - 1]; 
+                    if(top in prec){
+                        if((rightAssoc[t] && prec[t] < prec[top]) || (!rightAssoc[t] && prec[t] <= prec[top])){
+                            out.push(stack.pop());
+                        } else break;
+                    } else break; // Top ist '(', stoppe
+                } 
+                stack.push(t);
+            } 
+            // Klammer auf
+            else if(t === '('){ 
+                stack.push(t); 
+            } 
+            // Klammer zu
+            else if(t === ')'){ 
+                while(stack.length && stack[stack.length - 1] !== '(') out.push(stack.pop()); 
+                if(stack.pop() !== '(') throw new Error("Mismatched parentheses");
+                // Nach schließender Klammer: Pop die Funktion, falls vorhanden
+                const top = stack[stack.length - 1];
+                if(functionNames.includes(top)) out.push(stack.pop());
+            } else {
+                 // Unbekannter Token oder Funktion
+                if(functionNames.includes(t) || binaryOperators.includes(t)) {
+                     stack.push(t);
+                } else {
+                     throw new Error("Invalid token: " + t);
+                }
+            }
         } 
-      } 
-      if(st.length!==1) throw new Error("Invalid expression structure"); 
-      return st[0];
+
+        while(stack.length){
+            const x = stack.pop(); 
+            if(x === '(' || x === ')') throw new Error("Mismatched parentheses"); 
+            out.push(x);
+        } 
+        
+        // 4. Postfix (RPN) Auswertung
+        const st=[]; 
+        for(const t of out){
+            if(typeof t === 'number') st.push(t); 
+            else if(t === 'u-') st.push(-st.pop()); 
+            else if(functionNames.includes(t)){
+                const a = st.pop();
+                if (a === undefined) throw new Error("Function missing operand");
+                let r;
+                switch(t){
+                    case 'sin': r = Math.sin(a); break;
+                    case 'cos': r = Math.cos(a); break;
+                    case 'tan': r = Math.tan(a); break;
+                    case 'sqrt': r = Math.sqrt(a); break;
+                    case 'log10': r = Math.log10(a); break;
+                    case 'ln': r = Math.log(a); break;
+                    case 'pow2': r = Math.pow(a, 2); break;
+                    case 'fact':
+                        if (a < 0 || a !== Math.floor(a)) throw new Error("Factorial error");
+                        r = 1; for(let i=2; i<=a; i++) r *= i;
+                        break;
+                    default: throw new Error("Unknown function");
+                }
+                st.push(r);
+            }
+            else {
+                if(st.length < 2) throw new Error("Insufficient operands");
+                const b = st.pop(); 
+                const a = st.pop(); 
+                let r; 
+                switch(t){
+                    case '+':r=a+b;break;
+                    case '-':r=a-b;break;
+                    case '*':r=a*b;break;
+                    case '/':r=b===0?Infinity:a/b;break;
+                    case '%':r=a%b;break;
+                    case '^':r=Math.pow(a,b);break;
+                    case 'yroot':r=Math.pow(b, 1/a);break; 
+                    case 'logx':r=Math.log(b) / Math.log(a);break; 
+                    default:throw new Error("Unknown operator");
+                } 
+                st.push(r);
+            } 
+        } 
+        if(st.length!==1) throw new Error("Invalid expression structure"); 
+        return st[0];
     }
 
 
+    // ------------------------------------
     // --- Event Listener ---
+    // ------------------------------------
 
     document.querySelectorAll('button[data-num]').forEach(b=>b.addEventListener('click',()=>pushNum(b.dataset.num),{passive:true}));
     document.querySelectorAll('button[data-op]').forEach(b=>b.addEventListener('click',()=>pushOp(b.dataset.op),{passive:true}));
-    document.querySelectorAll('button[data-fn]').forEach(b=>b.addEventListener('click',()=>pushFunction(b.dataset.fn),{passive:true})); // NEU
-    document.querySelectorAll('button[data-const]').forEach(b=>b.addEventListener('click',()=>pushConstant(b.dataset.const),{passive:true})); // NEU
+    document.querySelectorAll('button[data-fn]').forEach(b=>b.addEventListener('click',()=>pushFunction(b.dataset.fn),{passive:true})); 
+    document.querySelectorAll('button[data-const]').forEach(b=>b.addEventListener('click',()=>pushConstant(b.dataset.const),{passive:true})); 
 
     document.querySelector('button[data-dot]')?.addEventListener('click',pushDot,{passive:true});
     document.querySelector('button[data-equals]')?.addEventListener('click',equals,{passive:true});
@@ -558,11 +581,11 @@ for(let i=0;i<tokens.length;i++){
     
     document.getElementById('copy').addEventListener('click',()=>{const txt=valueEl.textContent||''; navigator.clipboard?.writeText(txt).then(()=>{flash('Copied');}).catch(()=>{flash('Copy failed');})});
     
-    document.getElementById('swap').addEventListener('click', toggleMode, {passive:true}); // NEU: Swap Button
+    document.getElementById('swap').addEventListener('click', toggleMode, {passive:true}); 
 
     function flash(msg){statusEl.textContent=msg; setTimeout(()=>statusEl.textContent=isAdvanced ? 'Advanced' : 'Normal',1200);}
     
-    // Tastatur-Handler erweitert für die neuen Funktionen (z.B. s für sin)
+    // Tastatur-Handler
     window.addEventListener('keydown',(e)=>{
       const k=e.key;
       if(/^[0-9]$/.test(k)){pushNum(k);e.preventDefault();return;} 
@@ -578,18 +601,18 @@ for(let i=0;i<tokens.length;i++){
           if(k.toLowerCase() === 's') { pushFunction('sin'); e.preventDefault(); return; }
           if(k.toLowerCase() === 'c') { pushFunction('cos'); e.preventDefault(); return; }
           if(k.toLowerCase() === 't') { pushFunction('tan'); e.preventDefault(); return; }
-          if(k.toLowerCase() === 'r') { pushFunction('sqrt'); e.preventDefault(); return; } // r for root
-          if(k.toLowerCase() === 'p') { pushConstant('PI'); e.preventDefault(); return; } // p for Pi
+          if(k.toLowerCase() === 'r') { pushFunction('sqrt'); e.preventDefault(); return; } 
+          if(k.toLowerCase() === 'p') { pushConstant('PI'); e.preventDefault(); return; } 
       }
     });
     
-    // Initialisierung des Displays auf 'Normal'
+    // Initialisierung des Displays
     updateDisplay();
 
     // --- Service Worker for offline GitHub Pages ---
     if('serviceWorker' in navigator){
      navigator.serviceWorker.register('sw.js').then(()=>console.log('SW registered')).catch(console.error);
     }
-  </script>
+</script>
 </body>
 </html>
