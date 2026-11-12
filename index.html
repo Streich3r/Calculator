@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="de">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-  <title>Calculator</title>
+  <title>Rechner</title>
   <meta name="description" content="A simple, offline-ready calculator that works also as a PWA." />
 
   <!-- Manifest für PWA -->
@@ -79,7 +79,7 @@
 <body>
   <main class="app" role="application" aria-label="Calculator">
     <div class="top">
-      <h1>Calculator</h1>
+      <h1>Rechner</h1>
       <div class="credits" id="status">Normal</div>
     </div>
 
@@ -122,7 +122,7 @@
         <button data-num="3">3</button>
         <button data-op="+" data-variant="op" title="Plus">+</button>
         <button data-num="0" class="span-2">0</button>
-        <button data-dot=".">.</button>
+        <button data-dot=".">,</button>
         <button data-equals="=" data-variant="accent" title="Equals (=)">=</button>
         <button data-paren="(" title="Left parenthesis">(</button>
         <button data-paren=")" title="Right parenthesis">)</button>
@@ -132,494 +132,273 @@
     </div>
 
     <div class="footer">
-      <span>Keys: 0–9 • . • + − × ÷ • ( ) • % ^ • Enter • Esc • Backspace</span>
+      <span>Tastatur: 0–9 • Komma oder Punkt • + − × ÷ • ( ) • % ^ • Enter • Esc • Backspace</span>
       <div class="switcher">
-        <button class="switch" id="copy">Copy</button>
-        <button class="switch" id="swap">Swap</button>
+        <button class="switch" id="copy">Kopieren</button>
+        <button class="switch" id="swap">Erweitert</button>
       </div>
     </div>
   </main>
 
 <script>
-    // --- Calculator logic embedded ---
-    const appEl = document.querySelector('.app');
-    const valueEl = document.getElementById('value');
-    const exprEl = document.getElementById('expr');
-    const statusEl = document.getElementById('status');
-    const advancedKeysEl = document.querySelector('.advanced-keys');
-    
-    // Zustand
-    let expr = '', currentNumber = '0';
-    let isResult = false; 
-    let lastResult = null; 
-    let isAdvanced = false; // NEU: Modus-Zustand
+(() => {
+  'use strict';
+  const appEl = document.querySelector('.app');
+  const valueEl = document.getElementById('value');
+  const exprEl = document.getElementById('expr');
+  const statusEl = document.getElementById('status');
+  let expr = '', currentNumber = '0', isResult = false, isAdvanced = false;
+  let lastResult = null;
+  const ops = ['+', '-', '*', '/', '%', '^', 'yroot', 'logx'];
+  const functions = ['sin', 'cos', 'tan', 'sqrt', 'pow2', 'log10', 'ln', 'fact'];
+  const numberAtEnd = /(?:\d+(?:\.\d*)?|\.\d+)$/;
+  const german = new Intl.NumberFormat('de-DE', {maximumFractionDigits:12, useGrouping:false});
 
-    const isOp = c => ['+','-','*','/','%','^','yroot','logx'].includes(c);
-    const isNumChar = c => /[\d.−]/.test(c);
-
-    function updateDisplay(){
-      // Ersetze interne Operatoren durch Anzeigesymbole
-      let displayExpr = expr
-          .replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−')
-          .replace(/\^/g, '^').replace(/yroot/g, 'ⁿ√')
-          .replace(/logx/g, 'logᵪ');
-      
-      // Ersetze Funktionsnamen durch ihre Display-Form
-      displayExpr = displayExpr.replace(/pow2\((.*?)\)/g, '$1²');
-      displayExpr = displayExpr.replace(/sqrt\(/g, '√('); 
-      
-
-      exprEl.textContent = displayExpr;
-      valueEl.textContent = currentNumber;
-      statusEl.textContent = isAdvanced ? 'Advanced' : 'Normal';
+  function resultString(n) {
+    if (!Number.isFinite(n)) throw Error('Undefiniertes Ergebnis');
+    if (n === 0) return '0';
+    // Kein Runden von Eingaben! Ergebnis höchstens 12 signifikante Stellen.
+    const rounded = Number(n.toPrecision(12));
+    return String(rounded);
+  }
+  function displayNumber(s) {
+    if (s === 'Error') return 'Fehler';
+    // Tausenderpunkte werden nur in der Anzeige erzeugt, nie im Rechenkern.
+    if (/^-?\d+(?:\.\d*)?$/.test(s)) {
+      const [integer, fraction] = s.split('.');
+      const grouped = integer.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      return fraction === undefined ? grouped : grouped + ',' + fraction;
     }
-
-    // ------------------------------------
-    // --- Core UI/Eingabelogik ---
-    // ------------------------------------
-
-    function pushNum(n){
-      if(isResult){ 
-          expr = ''; 
-          isResult = false;
-          lastResult = null; 
-      }
-
-      const lastChar = expr.slice(-1);
-      if(isOp(lastChar) || lastChar === '(' || expr === ''){
-        expr += String(n);
-        currentNumber = String(n);
-      } else {
-        if(currentNumber === '0'){
-          expr = expr.slice(0, expr.length - currentNumber.length);
-        } else {
-          expr = expr.slice(0, expr.length - currentNumber.length);
-        }
-        
-        if(currentNumber === '0') currentNumber = String(n);
-        else currentNumber += String(n);
-        
-        expr += currentNumber;
-      }
-      updateDisplay();
-    }
-
-    function pushDot(){
-      if(isResult){ expr = '0'; isResult = false; }
-
-      const lastChar = expr.slice(-1);
-
-      if(expr === '' || isOp(lastChar) || lastChar === '('){
-        expr += '0.';
-        currentNumber = '0.';
-      } else if(!currentNumber.includes('.')){
-        expr = expr.slice(0, expr.length - currentNumber.length);
-        currentNumber += '.';
-        expr += currentNumber;
-      }
-      updateDisplay();
-    }
-
-    function pushOp(op){
-      if(isResult){
-          if (lastResult !== null) {
-              expr = currentNumber; 
-          } else {
-              expr = '0';
-          }
-          
-          expr += op;  
-          isResult = false;
-          currentNumber = '0'; 
-          updateDisplay();
-          return;
-      }
-      
-      if(isOp(expr.slice(-1))){
-        expr = expr.slice(0,-1) + op;
-      } 
-      else if(expr !== ''){
-        expr += op;
-        currentNumber = '0'; 
-      }
-      updateDisplay();
-    }
-    
-    function pushParen(p){
-      if(isResult){ expr = ''; isResult = false; lastResult = null; }
-      
-      const lastChar = expr.slice(-1);
-      
-      if(p === '('){
-        if(/[\d.)]/.test(lastChar) && expr !== '0') expr += '*';
-        expr += '(';
-      } else if (p === ')'){
-        const opens = (expr.match(/\(/g) || []).length;
-        const closes = (expr.match(/\)/g) || []).length;
-        
-        if(opens > closes && !isOp(lastChar) && lastChar !== '('){
-          expr += ')';
-        }
-      }
-      currentNumber = '0';
-      updateDisplay();
-    }
-
-    function backspace(){
-      if(isResult){ clearAll(); return; }
-
-      if(expr.length === 0 || expr === '0') {
-        clearAll(); return;
-      }
-      
-      expr = expr.slice(0, -1);
-      
-      if(!isOp(expr.slice(-1)) && expr.slice(-1) !== '(' && expr.slice(-1) !== ')'){
-        const match = expr.match(/(-?\d+\.?\d*|\.\d+)$/); 
-        currentNumber = match ? match[0].replace('-', '−') : '0';
-      } else {
-        currentNumber = '0';
-      }
-      
-      if(expr.length === 0) currentNumber = '0';
-      updateDisplay();
-    }
-    
-    function toggleSign(){
-      if(isResult){
-          // Toggle des Ergebnisses
-          const numericValue = lastResult || compute(currentNumber.replace(/−/g, '-'));
-          const newValue = -numericValue;
-          
-          expr = formatNumber(numericValue) + '=' + formatNumber(newValue);
-          currentNumber = formatNumber(newValue);
-          lastResult = newValue;
-          updateDisplay();
-          return;
-      }
-      
-      if(currentNumber === '0') return;
-
-      // Toggle der aktuellen Zahl im Ausdruck
-      const exprBase = expr.slice(0, expr.length - currentNumber.length);
-      const absValue = currentNumber.replace(/−/g, '');
-
-      if(currentNumber.startsWith('−')){
-        currentNumber = absValue;
-        expr = exprBase.replace(/-$/, '') + currentNumber;
-      } else {
-        currentNumber = '−' + absValue;
-        // Füge '-' nur hinzu, wenn kein Operator davor steht, sonst ist es unäres Minus
-        if(!isOp(exprBase.slice(-1)) && exprBase.slice(-1) !== '(' && exprBase !== '') {
-             expr = exprBase + '-' + absValue;
-        } else {
-             expr = exprBase + '-' + absValue;
-        }
-      }
-      updateDisplay();
-    }
-
-    function clearAll(){
-      expr = ''; 
-      currentNumber = '0'; 
-      isResult = false;
-      lastResult = null; 
-      updateDisplay();
-    }
-
-    // --- Advanced Logik und Moduswechsel ---
-
-    function pushFunction(fn){
-        if(isResult){ expr = ''; isResult = false; }
-
-        const lastChar = expr.slice(-1);
-
-        // Implizite Multiplikation: Wenn Zahl oder Klammer davor, füge '*' hinzu
-        if(isNumChar(lastChar) || lastChar === ')'){
-             expr += '*';
-        }
-
-        // Für Funktionen wie 'sin', 'log', 'sqrt'
-        expr += fn + '(';
-        currentNumber = '0';
-        updateDisplay();
-    }
-
-    function pushConstant(c){
-        if(isResult){ expr = ''; isResult = false; }
-        
-        const lastChar = expr.slice(-1);
-        const value = (c === 'PI') ? Math.PI.toFixed(12) : Math.E.toFixed(12);
-
-        // Implizite Multiplikation
-        if(isNumChar(lastChar) || lastChar === ')'){
-             expr += '*';
-        }
-
-        expr += value;
-        currentNumber = formatNumber(value);
-        updateDisplay();
-    }
-
-    // Moduswechsel-Funktion
-    function toggleMode(){
-        isAdvanced = !isAdvanced;
-        appEl.classList.toggle('advanced', isAdvanced);
-        updateDisplay();
-        clearAll();
-    }
-
-    // ------------------------------------
-    // --- Berechnungslogik (RPN/Shunting-Yard) ---
-    // ------------------------------------
-
-    function equals(){
-        let exprToCalc = expr;
-        if (exprToCalc === '' || exprToCalc.endsWith('=')) return;
-        
-        const opens = (exprToCalc.match(/\(/g)||[]).length;
-        const closes = (exprToCalc.match(/\)/g)||[]).length;
-        
-        // Fehlende Klammern zur Berechnung und zur Anzeige hinzufügen
-        const neededCloses = opens - closes;
-        if(neededCloses > 0) {
-            const closingParens = ')'.repeat(neededCloses);
-            exprToCalc += closingParens; // Für die Berechnung
-            expr += closingParens;       // Für die Anzeige
-        }
-        
-        // Entferne abschließende Operatoren oder öffnende Klammern vor der Berechnung
-        while(isOp(exprToCalc.slice(-1)) || exprToCalc.slice(-1) === '('){
-            exprToCalc = exprToCalc.slice(0, -1);
-            // Auch von der Anzeige-Variable entfernen
-            expr = expr.slice(0, -1);
-        }
-
-        let finalExprForCalc = exprToCalc.replace(/−/g, '-');
-        
-        // Logik für fortlaufende Berechnungen (z.B. 5 + = )
-        const parts = finalExprForCalc.split('=');
-        if (parts.length > 1) {
-            finalExprForCalc = parts.pop(); 
-            if (lastResult !== null) {
-                const startChar = finalExprForCalc.charAt(0);
-                if (isOp(startChar) || startChar === '(') {
-                    finalExprForCalc = lastResult + finalExprForCalc;
-                }
-            }
-        } 
-        
-        try{
-            const result = compute(finalExprForCalc); 
-            
-            currentNumber = formatNumber(result);
-            
-            // Finale Anzeige vorbereiten
-            expr = expr.replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−') + '=' + currentNumber;
-            
-            isResult = true;
-            lastResult = result; 
-            updateDisplay();
-        }catch(e){
-            currentNumber = 'Error'; 
-            expr = expr.replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−') + '=';
-            isResult = true;
-            lastResult = null;
-            updateDisplay();
-            console.error("Calculation Error:", e);
-        }
-    }
-
-    function formatNumber(n){if(!isFinite(n)) return 'Error'; const abs=Math.abs(n); if(abs!==0&&(abs<1e-6||abs>=1e12)) return n.toExponential(8).replace(/\.0+e/,'e'); return n.toLocaleString(undefined,{maximumFractionDigits:12});}
-    
-    // ⭐ KORRIGIERTE UND EINZIGE compute-Funktion
-    // Diese Funktion löst das Subtraktions- und Unär-Minus-Problem durch robuste Tokenisierung.
-    function compute(s){
-        // 1. Initialisierung und Vorbereitung
-        s = s.replace(/([+\-*/%^])\1+/g, '$1').replace(/=/g, ''); 
-        
-        // Füge Leerzeichen um Operatoren/Klammern ein, um eine einfache Trennung zu gewährleisten
-        // Dies ist der Schlüssel, um 5-5 korrekt zu tokenisieren
-        s = s.replace(/([()+\-*/%^])/g, ' $1 '); 
-        s = s.replace(/\s+/g, ' ').trim(); // Entferne doppelte Leerzeichen
-
-        // Tokenisierung mit Split nach Leerzeichen
-        const rawTokens = s.split(' ').filter(t => t.length > 0);
-        
-        // 2. Unäres Minus (u-) und Funktions-Tokenisierung
-        const finalTokens = [];
-        const functionNames = ['sin', 'cos', 'tan', 'sqrt', 'log10', 'ln', 'pow2', 'fact'];
-        const binaryOperators = ['+', '-', '*', '/', '%', '^', 'yroot', 'logx'];
-
-        for(let i = 0; i < rawTokens.length; i++){
-            const t = rawTokens[i];
-            
-            if (t === '-') {
-                const prev = rawTokens[i-1];
-                // Unäres Minus, wenn:
-                // 1. Erster Token ODER
-                // 2. Nach einem binären Operator ODER
-                // 3. Nach einer öffnenden Klammer ODER
-                // 4. Nach einem Funktionsnamen
-                if(i === 0 || binaryOperators.includes(prev) || functionNames.includes(prev) || prev === '('){
-                    finalTokens.push('u-');
-                } else {
-                    finalTokens.push(t); // Binäres Minus (Subtraktion)
-                }
-            } else {
-                finalTokens.push(t);
-            }
-        }
-
-        // Prioritäten und Assoziativität
-        const prec = {'u-':4,'^':3,'*':2,'/':2,'%':2,'yroot':3,'logx':3,'+':1,'-':1, 'sin':5,'cos':5,'tan':5,'sqrt':5,'log10':5,'ln':5,'pow2':5,'fact':5}; 
-        const rightAssoc = {'^':true,'u-':true}; 
-        
-        // 3. Shunting-Yard (Infix zu Postfix)
-        const out=[],stack=[]; 
-        for(const t of finalTokens){
-            // Zahl
-            if(!isNaN(parseFloat(t)) && isFinite(t)){ 
-                out.push(Number(t)); 
-            } 
-            // Operator / Funktion
-            else if(t in prec){ 
-                while(stack.length){
-                    const top = stack[stack.length - 1]; 
-                    if(top in prec){
-                        if((rightAssoc[t] && prec[t] < prec[top]) || (!rightAssoc[t] && prec[t] <= prec[top])){
-                            out.push(stack.pop());
-                        } else break;
-                    } else break; // Top ist '(', stoppe
-                } 
-                stack.push(t);
-            } 
-            // Klammer auf
-            else if(t === '('){ 
-                stack.push(t); 
-            } 
-            // Klammer zu
-            else if(t === ')'){ 
-                while(stack.length && stack[stack.length - 1] !== '(') out.push(stack.pop()); 
-                if(stack.pop() !== '(') throw new Error("Mismatched parentheses");
-                // Nach schließender Klammer: Pop die Funktion, falls vorhanden
-                const top = stack[stack.length - 1];
-                if(functionNames.includes(top)) out.push(stack.pop());
-            } else {
-                 // Unbekannter Token oder Funktion
-                if(functionNames.includes(t) || binaryOperators.includes(t)) {
-                     stack.push(t);
-                } else {
-                     throw new Error("Invalid token: " + t);
-                }
-            }
-        } 
-
-        while(stack.length){
-            const x = stack.pop(); 
-            if(x === '(' || x === ')') throw new Error("Mismatched parentheses"); 
-            out.push(x);
-        } 
-        
-        // 4. Postfix (RPN) Auswertung
-        const st=[]; 
-        for(const t of out){
-            if(typeof t === 'number') st.push(t); 
-            else if(t === 'u-') st.push(-st.pop()); 
-            else if(functionNames.includes(t)){
-                const a = st.pop();
-                if (a === undefined) throw new Error("Function missing operand");
-                let r;
-                switch(t){
-                    case 'sin': r = Math.sin(a); break;
-                    case 'cos': r = Math.cos(a); break;
-                    case 'tan': r = Math.tan(a); break;
-                    case 'sqrt': r = Math.sqrt(a); break;
-                    case 'log10': r = Math.log10(a); break;
-                    case 'ln': r = Math.log(a); break;
-                    case 'pow2': r = Math.pow(a, 2); break;
-                    case 'fact':
-                        if (a < 0 || a !== Math.floor(a)) throw new Error("Factorial error");
-                        r = 1; for(let i=2; i<=a; i++) r *= i;
-                        break;
-                    default: throw new Error("Unknown function");
-                }
-                st.push(r);
-            }
-            else {
-                if(st.length < 2) throw new Error("Insufficient operands");
-                const b = st.pop(); 
-                const a = st.pop(); 
-                let r; 
-                switch(t){
-                    case '+':r=a+b;break;
-                    case '-':r=a-b;break;
-                    case '*':r=a*b;break;
-                    case '/':r=b===0?Infinity:a/b;break;
-                    case '%':r=a%b;break;
-                    case '^':r=Math.pow(a,b);break;
-                    case 'yroot':r=Math.pow(b, 1/a);break; 
-                    case 'logx':r=Math.log(b) / Math.log(a);break; 
-                    default:throw new Error("Unknown operator");
-                } 
-                st.push(r);
-            } 
-        } 
-        if(st.length!==1) throw new Error("Invalid expression structure"); 
-        return st[0];
-    }
-
-
-    // ------------------------------------
-    // --- Event Listener ---
-    // ------------------------------------
-
-    document.querySelectorAll('button[data-num]').forEach(b=>b.addEventListener('click',()=>pushNum(b.dataset.num),{passive:true}));
-    document.querySelectorAll('button[data-op]').forEach(b=>b.addEventListener('click',()=>pushOp(b.dataset.op),{passive:true}));
-    document.querySelectorAll('button[data-fn]').forEach(b=>b.addEventListener('click',()=>pushFunction(b.dataset.fn),{passive:true})); 
-    document.querySelectorAll('button[data-const]').forEach(b=>b.addEventListener('click',()=>pushConstant(b.dataset.const),{passive:true})); 
-
-    document.querySelector('button[data-dot]')?.addEventListener('click',pushDot,{passive:true});
-    document.querySelector('button[data-equals]')?.addEventListener('click',equals,{passive:true});
-    document.querySelector('button[data-sign]')?.addEventListener('click',toggleSign,{passive:true});
-    document.querySelector('button[title="Clear (Esc)"]')?.addEventListener('click',clearAll,{passive:true});
-    document.querySelector('button[title="Backspace"]')?.addEventListener('click',backspace,{passive:true});
-    document.querySelectorAll('button[data-paren]').forEach(b=>b.addEventListener('click',()=>pushParen(b.dataset.paren),{passive:true}));
-    
-    document.getElementById('copy').addEventListener('click',()=>{const txt=valueEl.textContent||''; navigator.clipboard?.writeText(txt).then(()=>{flash('Copied');}).catch(()=>{flash('Copy failed');})});
-    
-    document.getElementById('swap').addEventListener('click', toggleMode, {passive:true}); 
-
-    function flash(msg){statusEl.textContent=msg; setTimeout(()=>statusEl.textContent=isAdvanced ? 'Advanced' : 'Normal',1200);}
-    
-    // Tastatur-Handler
-    window.addEventListener('keydown',(e)=>{
-      const k=e.key;
-      if(/^[0-9]$/.test(k)){pushNum(k);e.preventDefault();return;} 
-      if(k==='.') {pushDot();e.preventDefault();return;} 
-      if(['+','-','*','/','%','^'].includes(k)){pushOp(k);e.preventDefault();return;} 
-      if(k==='('||k===')'){pushParen(k);e.preventDefault();return;} 
-      if(k==='Enter'||k==='='){e.preventDefault();equals();return;} 
-      if(k==='Backspace'){backspace();e.preventDefault();return;} 
-      if(k==='Escape'){clearAll();e.preventDefault();return;}
-      
-      // Advanced Key Shortcuts
-      if(isAdvanced) {
-          if(k.toLowerCase() === 's') { pushFunction('sin'); e.preventDefault(); return; }
-          if(k.toLowerCase() === 'c') { pushFunction('cos'); e.preventDefault(); return; }
-          if(k.toLowerCase() === 't') { pushFunction('tan'); e.preventDefault(); return; }
-          if(k.toLowerCase() === 'r') { pushFunction('sqrt'); e.preventDefault(); return; } 
-          if(k.toLowerCase() === 'p') { pushConstant('PI'); e.preventDefault(); return; } 
-      }
-    });
-    
-    // Initialisierung des Displays
+    return s.replace(/\./g, ',');
+  }
+  function prettify(s) {
+    return s.replace(/yroot/g, 'ⁿ√').replace(/logx/g, 'logᵪ')
+      .replace(/sqrt/g, '√').replace(/\*/g, '×').replace(/\//g, '÷')
+      .replace(/-/g, '−').replace(/(\d)\.(\d)/g, '$1,$2');
+  }
+  function updateDisplay() {
+    exprEl.textContent = prettify(expr);
+    valueEl.textContent = displayNumber(currentNumber);
+    statusEl.textContent = isAdvanced ? 'Advanced' : 'Normal';
+  }
+  function clearAll() {
+    expr = ''; currentNumber = '0'; isResult = false; lastResult = null; updateDisplay();
+  }
+  function afterResultForNewInput() {
+    if (isResult) {expr = ''; currentNumber = '0'; isResult = false; lastResult = null;}
+  }
+  function afterResultForOperation() {
+    if (isResult) {expr = lastResult === null ? '' : resultString(lastResult); isResult = false;}
+  }
+  function trailingNumber() {return expr.match(numberAtEnd)?.[0] ?? '';}
+  function endsValue() {return /(?:[\d)]|pi|e)$/.test(expr);}
+  function lastIsBinaryOp() {return /(?:[+*/%^]|yroot|logx)$/.test(expr) || (expr.endsWith('-') && !isUnaryMinusAtEnd());}
+  function isUnaryMinusAtEnd() {
+    if (!expr.endsWith('-')) return false;
+    const base = expr.slice(0,-1);
+    return !base || /(?:[+*/%^(-]|yroot|logx)$/.test(base);
+  }
+  function pushNum(n) {
+    afterResultForNewInput();
+    if (expr.endsWith(')') || expr.endsWith('pi') || expr.endsWith('e')) expr += '*';
+    let t = trailingNumber();
+    if (t) {
+      if (t === '0') expr = expr.slice(0,-1) + n;
+      else expr += n;
+    } else expr += n;
+    currentNumber = trailingNumber() || n;
     updateDisplay();
-
-    // --- Service Worker for offline GitHub Pages ---
-    if('serviceWorker' in navigator){
-     navigator.serviceWorker.register('sw.js').then(()=>console.log('SW registered')).catch(console.error);
+  }
+  function pushDot() {
+    afterResultForNewInput();
+    if (expr.endsWith(')') || expr.endsWith('pi') || expr.endsWith('e')) expr += '*';
+    const t = trailingNumber();
+    if (t.includes('.')) return;
+    expr += t ? '.' : '0.';
+    currentNumber = trailingNumber() || '0.';
+    updateDisplay();
+  }
+  function pushOp(op) {
+    afterResultForOperation();
+    if (!expr) {
+      if (op === '-') expr = '-';
+      else return;
+    } else if (expr.endsWith('(')) {
+      if (op === '-') expr += '-'; else return;
+    } else if (lastIsBinaryOp()) {
+      if (op === '-' && !expr.endsWith('--')) expr += '-';
+      else expr = expr.replace(/(?:yroot|logx|[+*/%^\-])$/, op);
+    } else if (isUnaryMinusAtEnd()) {
+      // Ein zweites Minus ignorieren; andere Operatoren ersetzen nur das Vorzeichen.
+      if (op !== '-') expr = expr.slice(0,-1) + op;
+    } else if (endsValue()) expr += op;
+    else return;
+    currentNumber = '0'; updateDisplay();
+  }
+  function pushParen(p) {
+    afterResultForNewInput();
+    if (p === '(') {
+      if (endsValue()) expr += '*';
+      expr += '(';
+    } else {
+      const opens = (expr.match(/\(/g)||[]).length, closes=(expr.match(/\)/g)||[]).length;
+      if (opens > closes && endsValue()) expr += ')'; else return;
     }
+    currentNumber = trailingNumber() || '0'; updateDisplay();
+  }
+  function backspace() {
+    if (isResult) {afterResultForOperation();}
+    if (expr.endsWith('yroot')) expr = expr.slice(0,-5);
+    else if (expr.endsWith('logx')) expr = expr.slice(0,-4);
+    else expr = expr.slice(0,-1);
+    currentNumber = trailingNumber() || '0'; updateDisplay();
+  }
+  function toggleSign() {
+    if (isResult) {
+      if (lastResult === null) return;
+      lastResult = -lastResult; expr = resultString(lastResult);
+      currentNumber = expr; isResult = true; updateDisplay(); return;
+    }
+    const m = expr.match(numberAtEnd);
+    if (!m) { if (!expr || lastIsBinaryOp() || expr.endsWith('(')) expr += '-'; updateDisplay(); return; }
+    const start = m.index, prefix = expr.slice(0,start);
+    const precedingMinusIsUnary = prefix.endsWith('-') && (!prefix.slice(0,-1) || /(?:[+*/%^(-]|yroot|logx)$/.test(prefix.slice(0,-1)));
+    if (precedingMinusIsUnary) expr = prefix.slice(0,-1) + m[0];
+    else expr = prefix + '-' + m[0];
+    currentNumber = (precedingMinusIsUnary ? '' : '-') + m[0]; updateDisplay();
+  }
+  function pushFunction(fn) {
+    afterResultForNewInput();
+    if (endsValue()) expr += '*';
+    expr += fn + '('; currentNumber = '0'; updateDisplay();
+  }
+  function pushConstant(c) {
+    afterResultForNewInput();
+    if (endsValue()) expr += '*';
+    // Konstante als voller numerischer Wert, nicht auf 12 Stellen gekürzt.
+    expr += c === 'PI' ? 'pi' : 'e';
+    currentNumber = resultString(c === 'PI' ? Math.PI : Math.E); updateDisplay();
+  }
+  function toggleMode() {
+    isAdvanced = !isAdvanced;
+    appEl.classList.toggle('advanced', isAdvanced);
+    updateDisplay(); // Beim Moduswechsel Rechnung NICHT löschen.
+  }
+
+  // Lexer mit strengem Dezimalformat; deutsche Eingaben werden vorab normalisiert.
+  function tokenize(input) {
+    const s = input.replace(/,/g,'.').replace(/−/g,'-').replace(/×/g,'*').replace(/÷/g,'/');
+    const tokens = []; let i=0;
+    while (i<s.length) {
+      if (/\s/.test(s[i])) {i++;continue;}
+      const rest=s.slice(i);
+      const m = rest.match(/^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+\-]?\d+)?/);
+      if (m) {const n=Number(m[0]); if (!Number.isFinite(n)) throw Error('Ungültige Zahl'); tokens.push({type:'number',value:n}); i+=m[0].length; continue;}
+      const id=rest.match(/^(?:yroot|logx|log10|sqrt|pow2|fact|sin|cos|tan|ln|pi|e)/);
+      if(id) {tokens.push({type:'id',value:id[0]});i+=id[0].length;continue;}
+      if('()+-*/%^'.includes(s[i])) {tokens.push({type:s[i],value:s[i]});i++;continue;}
+      throw Error('Ungültiges Zeichen: '+s[i]);
+    }
+    tokens.push({type:'EOF'});return tokens;
+  }
+  function compute(input) {
+    const tokens=tokenize(input); let pos=0;
+    const peek=()=>tokens[pos];
+    const take=(type)=>{if(peek().type!==type)throw Error('Erwartet: '+type);return tokens[pos++];};
+    function atom() {
+      const t=peek();
+      if(t.type==='number') {pos++;return t.value;}
+      if(t.type==='(') {pos++;const a=parse(0);take(')');return a;}
+      if(t.type==='id') {
+        pos++;
+        if(t.value==='pi') return Math.PI;
+        if(t.value==='e') return Math.E;
+        if(!functions.includes(t.value)) throw Error('Unbekannte Funktion: '+t.value);
+        take('('); const a=parse(0);take(')');
+        switch(t.value) {
+          case 'sin': return Math.sin(a); case 'cos':return Math.cos(a);
+          case 'tan':return Math.tan(a);case 'sqrt':return Math.sqrt(a);
+          case 'pow2':return a*a;case 'log10':return Math.log10(a);
+          case 'ln':return Math.log(a);
+          case 'fact': {
+            if(!Number.isInteger(a)||a<0||a>170)throw Error('Fakultät nur von 0 bis 170');
+            let r=1; for(let i=2;i<=a;i++)r*=i;return r;
+          }
+        }
+      }
+      if(t.type==='-' || t.type==='+') {pos++;const v=parse(3);return t.type==='-'?-v:v;}
+      throw Error('Zahl oder Klammer erwartet');
+    }
+    const prio={'+':1,'-':1,'*':2,'/':2,'%':2,'^':4,yroot:4,logx:4};
+    function parse(minPrec) {
+      let left=atom();
+      while(true) {
+        const t=peek(); const op=t.type==='id' ? t.value : t.type;
+        const p=prio[op];if(p===undefined||p<minPrec)break;
+        pos++;const right=parse(p+(op==='^'?0:1));
+        switch(op) {
+          case '+':left+=right;break;case '-':left-=right;break;
+          case '*':left*=right;break;case '/':left/=right;break;
+          case '%':left%=right;break;case '^':left=Math.pow(left,right);break;
+          case 'yroot':left=Math.pow(right,1/left);break;
+          case 'logx':left=Math.log(right)/Math.log(left);break;
+        }
+      }
+      return left;
+    }
+    const value=parse(0);if(peek().type!=='EOF')throw Error('Ungültige oder unvollständige Eingabe');
+    if(!Number.isFinite(value))throw Error('Ergebnis nicht definiert');return value;
+  }
+  function equals() {
+    if (!expr || isResult) return;
+    let input=expr;
+    // Echte Tippfehler melden, statt stillschweigend Operatoren zu entfernen.
+    const opens=(input.match(/\(/g)||[]).length, closes=(input.match(/\)/g)||[]).length;
+    if(opens>closes && /(?:[\d)]|pi|e)$/.test(input)) input+=')'.repeat(opens-closes);
+    try {
+      const result=compute(input);
+      lastResult=result; currentNumber=resultString(result);
+      expr=input+'='+currentNumber; isResult=true;updateDisplay();
+    } catch(e) {
+      lastResult=null;currentNumber='Error';isResult=true;expr=input+'=';updateDisplay();
+      console.warn('Rechenfehler:', e.message);
+    }
+  }
+  document.querySelectorAll('button[data-num]').forEach(b=>b.addEventListener('click',()=>pushNum(b.dataset.num)));
+  document.querySelectorAll('button[data-op]').forEach(b=>b.addEventListener('click',()=>pushOp(b.dataset.op)));
+  document.querySelectorAll('button[data-fn]').forEach(b=>b.addEventListener('click',()=>pushFunction(b.dataset.fn)));
+  document.querySelectorAll('button[data-const]').forEach(b=>b.addEventListener('click',()=>pushConstant(b.dataset.const)));
+  document.querySelector('button[data-dot]').addEventListener('click',pushDot);
+  document.querySelector('button[data-equals]').addEventListener('click',equals);
+  document.querySelector('button[data-sign]').addEventListener('click',toggleSign);
+  document.querySelector('button[data-key="Escape"]').addEventListener('click',clearAll);
+  document.querySelector('button[data-key="Backspace"]').addEventListener('click',backspace);
+  document.querySelectorAll('button[data-paren]').forEach(b=>b.addEventListener('click',()=>pushParen(b.dataset.paren)));
+  document.getElementById('swap').addEventListener('click',toggleMode);
+  function flash(s){statusEl.textContent=s;setTimeout(updateDisplay,1200);}
+  document.getElementById('copy').addEventListener('click',async()=>{
+    try {await navigator.clipboard.writeText(displayNumber(currentNumber));flash('Kopiert');}
+    catch {flash('Kopieren fehlgeschlagen');}
+  });
+  window.addEventListener('keydown',e=>{
+    const k=e.key;
+    if(/^[0-9]$/.test(k))pushNum(k);
+    else if(k==='.'||k===',')pushDot();
+    else if(['+','-','*','/','%','^'].includes(k))pushOp(k);
+    else if(k==='('||k===')')pushParen(k);
+    else if(k==='Enter'||k==='=')equals();
+    else if(k==='Backspace')backspace();
+    else if(k==='Escape')clearAll();
+    else if(isAdvanced && ({s:'sin',c:'cos',t:'tan',r:'sqrt'}[k.toLowerCase()])) pushFunction({s:'sin',c:'cos',t:'tan',r:'sqrt'}[k.toLowerCase()]);
+    else if(isAdvanced && k.toLowerCase()==='p')pushConstant('PI');
+    else return;
+    e.preventDefault();
+  });
+  updateDisplay();
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(console.warn);
+  // Für die automatisierten Tests; kein Eingriff in das UI.
+  window.__calculatorTest = {compute,tokenize,pushNum,pushDot,pushOp,equals,clearAll,toggleSign,getState:()=>({expr,currentNumber,isResult})};
+})();
 </script>
 </body>
 </html>
